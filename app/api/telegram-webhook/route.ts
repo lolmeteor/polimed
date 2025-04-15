@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { contactsStore } from "../telegram-contact/route"
 
-// Токен вашего бота (в реальном приложении должен храниться в переменных окружения)
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "YOUR_BOT_TOKEN"
+// Используем токен бота из переменных окружения или устанавливаем актуальный
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "7749348003:AAHYr26BF2lm1fU3SdXaxDEAsz2XDnfOyxI"
 
 // Интерфейс для обновления от Telegram
 interface TelegramUpdate {

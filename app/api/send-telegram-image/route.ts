@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
       console.log("Попытка получить токен из serverRuntimeConfig");
     }
     
-    // Хардкодим токен в качестве запасного варианта (только для тестирования, небезопасно для продакшена)
+    // Устанавливаем актуальный токен в качестве запасного варианта
     if (!TELEGRAM_BOT_TOKEN) {
-      TELEGRAM_BOT_TOKEN = '7686816248:AAF8YUpX7WMskXC7GDE_4OWzPuiyb4Ifp-Y';
+      TELEGRAM_BOT_TOKEN = '7749348003:AAHYr26BF2lm1fU3SdXaxDEAsz2XDnfOyxI';
       console.log("Используем захардкоженный токен (только для отладки)");
     }
     

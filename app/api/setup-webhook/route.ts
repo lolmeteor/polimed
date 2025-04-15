@@ -1,5 +1,5 @@
-// Токен вашего бота (в реальном приложении должен храниться в переменных окружения)
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "YOUR_BOT_TOKEN"
+// Токен вашего бота из переменных окружения или актуальный токен
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "7749348003:AAHYr26BF2lm1fU3SdXaxDEAsz2XDnfOyxI"
 
 // Улучшаем обработку ошибок и добавляем больше логирования
 export async function GET(request: Request) {
@@ -24,10 +24,10 @@ export async function GET(request: Request) {
     }
 
     console.log(`Настраиваем вебхук для бота. URL: ${webhookUrl}`)
-    console.log(`Используем токен: ${process.env.TELEGRAM_BOT_TOKEN ? "Токен установлен" : "Токен НЕ установлен"}`)
+    console.log(`Используем токен: ${BOT_TOKEN ? "Токен установлен" : "Токен НЕ установлен"}`)
 
     // Настраиваем вебхук
-    const response = await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook`, {
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
