@@ -1,84 +1,159 @@
-import { AppointmentSlot, Appointment } from '@/types/appointment'
-import { getAppointmentSlots } from '@/data/appointments'
-import { getProcedureSlots } from '@/data/procedures'
+import { AppointmentSlot, Appointment, DoctorSpecialty } from '@/types/appointment'
+// Удаляю импорты из моковых данных
+//import { getAppointmentSlots } from '@/data/appointments'
+//import { getProcedureSlots } from '@/data/procedures'
+import { MisApiService } from './mis-api-service'
+import { MisMappingService } from './mis-mapping-service'
+import { MIS_API_CONFIG } from '@/constants/api-config'
 
-// Кеш сгенерированных слотов, используется для управления доступными слотами
+// Кеш данных для оптимизации запросов
 const slotsCache: Record<string, AppointmentSlot[]> = {}
 const procedureSlotsCache: Record<string, AppointmentSlot[]> = {}
 
+// Кеш ЛПУ и специальностей для быстрого доступа
+const lpuCache: { id: string, name: string, address?: string, phone?: string }[] = [];
+const specialtyCache: DoctorSpecialty[] = [];
+const doctorCache: Record<string, { id: string, name: string, info?: string, phone?: string }[]> = {};
+
 /**
- * Сервис для работы с записями на прием
- * В будущем может быть заменен на реальные запросы к API
+ * Сервис для работы с записями на прием через API МИС
  */
 export class AppointmentService {
-  private specialistSlotsCache: Record<string, AppointmentSlot[]> = {
-    "therapist": [
-      {
-        id: "t1",
-        datetime: "2023-09-23T10:00:00",
-        doctorName: "Иванова А.П.",
-        doctorSpecialty: "Терапевт",
-        address: "ул. Медицинская, 1",
-        cabinet: "101",
-        ticketNumber: "Т-001",
-      },
-      {
-        id: "t2",
-        datetime: "2023-09-23T11:30:00", 
-        doctorName: "Иванова А.П.",
-        doctorSpecialty: "Терапевт",
-        address: "ул. Медицинская, 1",
-        cabinet: "101",
-        ticketNumber: "Т-002",
-      },
-      {
-        id: "t3",
-        datetime: "2023-09-23T12:45:00",
-        doctorName: "Иванова А.П.",
-        doctorSpecialty: "Терапевт",
-        address: "ул. Медицинская, 1",
-        cabinet: "101",
-        ticketNumber: "Т-003",
-      },
-      // Добавляю еще слотов для тестирования
-      {
-        id: "t4",
-        datetime: "2023-09-24T10:00:00",
-        doctorName: "Петров И.К.",
-        doctorSpecialty: "Терапевт",
-        address: "ул. Медицинская, 1",
-        cabinet: "102",
-        ticketNumber: "Т-004",
-      },
-      {
-        id: "t5",
-        datetime: "2023-09-24T11:30:00",
-        doctorName: "Петров И.К.",
-        doctorSpecialty: "Терапевт",
-        address: "ул. Медицинская, 1",
-        cabinet: "102",
-        ticketNumber: "Т-005",
-      }
-    ],
-  }
-
-  private blockedSlots: string[] = ["t2", "t4"]; // Блокируем некоторые слоты для тестирования
-
   /**
    * Получает доступные слоты записи для указанной специальности
    * @param specialtySlug - слаг специальности
    * @returns массив доступных слотов
    */
   static async getAvailableSlots(specialtySlug: string): Promise<AppointmentSlot[]> {
-    // Имитация задержки сети
-    await new Promise(resolve => setTimeout(resolve, 300))
+    // Проверяем кеш
+    if (slotsCache[specialtySlug]) {
+      return [...slotsCache[specialtySlug]];
+    }
+
+    // Если в кеше нет данных о специальностях, загружаем их
+    if (specialtyCache.length === 0) {
+      await this.loadSpecialties();
+    }
+
+    // Находим ID специальности по слагу
+    const specialty = specialtyCache.find(s => s.slug === specialtySlug);
+    if (!specialty) {
+      throw new Error(`Специальность "${specialtySlug}" не найдена`);
+    }
+
+    // Если в кеше нет данных о врачах для этой специальности, загружаем их
+    if (!doctorCache[specialty.id]) {
+      await this.loadDoctors(specialty.id);
+    }
+
+    // Если нет врачей для этой специальности, возвращаем пустой массив
+    const doctors = doctorCache[specialty.id];
+    if (!doctors || doctors.length === 0) {
+      slotsCache[specialtySlug] = [];
+      return [];
+    }
+
+    // Для демонстрации берем первого врача
+    const doctor = doctors[0];
+
+    // Получаем доступные записи для этого врача
+    const slots = await this.getAppointmentSlotsForDoctor(
+      doctor.id, 
+      doctor.name, 
+      specialty.name
+    );
+
+    // Сохраняем в кеш
+    slotsCache[specialtySlug] = slots;
+    return [...slots];
+  }
+
+  /**
+   * Загружает список специальностей из API МИС
+   */
+  private static async loadSpecialties(): Promise<void> {
+    // Используем ID ЛПУ из конфигурации
+    const lpuId = MIS_API_CONFIG.DEFAULT_LPU_ID;
     
-    // Получаем слоты из data layer и сохраняем в кеш
-    if (!slotsCache[specialtySlug]) {
-      slotsCache[specialtySlug] = getAppointmentSlots(specialtySlug)
+    const response = await MisApiService.getSpecialityList(lpuId);
+    const specialties = MisMappingService.mapSpecialityList(response);
+    
+    // Сохраняем в кеш
+    specialtyCache.length = 0;
+    specialtyCache.push(...specialties);
+  }
+
+  /**
+   * Загружает список врачей для указанной специальности из API МИС
+   */
+  private static async loadDoctors(specialityId: string): Promise<void> {
+    // Используем ID ЛПУ из конфигурации
+    const lpuId = MIS_API_CONFIG.DEFAULT_LPU_ID;
+    
+    const response = await MisApiService.getDoctorList(lpuId, specialityId);
+    const doctors = MisMappingService.mapDoctorList(response);
+    
+    // Сохраняем в кеш
+    doctorCache[specialityId] = doctors;
+  }
+
+  /**
+   * Получает доступные слоты записи для указанного врача
+   */
+  private static async getAppointmentSlotsForDoctor(
+    doctorId: string, 
+    doctorName: string, 
+    doctorSpecialty: string
+  ): Promise<AppointmentSlot[]> {
+    // Используем ID ЛПУ из конфигурации
+    const lpuId = MIS_API_CONFIG.DEFAULT_LPU_ID;
+    // Получаем адрес ЛПУ
+    const address = await this.getLpuAddress(lpuId);
+
+    // Устанавливаем диапазон дат на ближайшие 30 дней
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 30);
+
+    // Получаем доступные слоты
+    const response = await MisApiService.getAvailableAppointments(
+      lpuId, 
+      doctorId, 
+      startDate, 
+      endDate
+    );
+
+    // Преобразуем в формат приложения
+    return MisMappingService.mapAppointmentSlots(
+      response, 
+      doctorName, 
+      doctorSpecialty, 
+      address
+    );
+  }
+
+  /**
+   * Получает адрес ЛПУ по его ID
+   */
+  private static async getLpuAddress(lpuId: string): Promise<string> {
+    // Если в кеше нет данных о ЛПУ, загружаем их
+    if (lpuCache.length === 0) {
+      // Получаем список районов
+      const districtResponse = await MisApiService.getDistrictList();
+      const districts = MisMappingService.mapDistrictList(districtResponse);
+      
+      if (districts.length > 0) {
+        // Берем первый район и получаем список ЛПУ
+        const lpuResponse = await MisApiService.getLPUList(districts[0].id);
+        const lpus = MisMappingService.mapLPUList(lpuResponse);
+        
+        lpuCache.push(...lpus);
+      }
     }
     
-    return [...slotsCache[specialtySlug]]
+    // Находим ЛПУ по ID
+    const lpu = lpuCache.find(l => l.id === lpuId);
+    return lpu?.address || "Адрес не указан";
   }
 
   /**
@@ -167,14 +242,34 @@ export class AppointmentService {
    * @returns созданная запись
    */
   static async createAppointment(appointmentData: AppointmentSlot): Promise<Appointment> {
-    // Имитация задержки сети
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Используем ID ЛПУ из конфигурации и фиксированный ID пациента
+    const lpuId = MIS_API_CONFIG.DEFAULT_LPU_ID;
+    const patientId = "7453"; // ID, которое указано в примере Postman
+    
+    // Создаем запись через API МИС
+    const response = await MisApiService.setAppointment(
+      appointmentData.id,
+      lpuId,
+      patientId
+    );
+    
+    if (!response.Success) {
+      const errors = response.ErrorList?.Error;
+      const errorMessage = Array.isArray(errors) 
+        ? errors.map(e => e.ErrorDescription).join('; ')
+        : errors?.ErrorDescription || 'Неизвестная ошибка при создании записи';
+      
+      throw new Error(errorMessage);
+    }
     
     // Форматируем дату и время для единообразия
     const formattedDateTime = this.formatAppointmentDateTime(appointmentData.datetime);
     
-    // В реальном API здесь был бы POST запрос
-    // В моковой версии просто возвращаем данные
+    // Удаляем использованный слот из кеша всех специальностей
+    Object.keys(slotsCache).forEach(key => {
+      slotsCache[key] = slotsCache[key].filter(slot => slot.id !== appointmentData.id);
+    });
+    
     return {
       id: appointmentData.id,
       datetime: formattedDateTime,
@@ -183,7 +278,7 @@ export class AppointmentService {
       ticketNumber: appointmentData.ticketNumber,
       doctorSpecialty: appointmentData.doctorSpecialty,
       doctorName: appointmentData.doctorName
-    }
+    };
   }
 
   /**
@@ -192,264 +287,53 @@ export class AppointmentService {
    * @returns успех операции
    */
   static async cancelAppointment(appointmentId: string): Promise<boolean> {
-    // Имитация задержки сети
-    await new Promise(resolve => setTimeout(resolve, 400))
+    // В текущей версии API МИС нет метода для отмены записи
+    // Здесь должен быть запрос к API МИС, когда он будет реализован
     
-    // В реальном API здесь был бы DELETE запрос
-    // В моковой версии просто возвращаем успех
-    return true
+    throw new Error('Метод отмены записи еще не реализован в API МИС');
   }
 
   /**
-   * Получает историю записей для указанного профиля
-   * @param profileId - идентификатор профиля пользователя
-   * @returns массив записей
+   * Получает историю записей на прием для указанного профиля
+   * @param profileId - идентификатор профиля
+   * @returns массив записей на прием
    */
   static async getAppointmentHistory(profileId: string): Promise<Appointment[]> {
-    // Имитация задержки сети
-    await new Promise(resolve => setTimeout(resolve, 600))
+    // В текущей версии API МИС нет метода для получения истории записей
+    // Здесь должен быть запрос к API МИС, когда он будет реализован
     
-    // В реальном API здесь был бы GET запрос
-    // В моковой версии возвращаем пустой массив
-    return []
+    throw new Error('Метод получения истории записей еще не реализован в API МИС');
   }
-
+  
   /**
-   * Блокирует слот в кеше после записи
-   * @param appointmentId - идентификатор слота
-   * @returns успех операции
-   */
-  static blockAppointmentSlot(appointmentId: string): boolean {
-    // Проходим по всем сохраненным слотам и удаляем слот с указанным ID
-    Object.keys(slotsCache).forEach(specialtySlug => {
-      slotsCache[specialtySlug] = slotsCache[specialtySlug].filter(
-        (slot: AppointmentSlot) => slot.id !== appointmentId
-      )
-    })
-    
-    return true
-  }
-
-  /**
-   * Разблокирует слот в кеше после отмены записи
-   * @param appointmentData - данные записи для восстановления слота
-   * @returns успех операции
-   */
-  static unblockAppointmentSlot(appointmentData: Appointment): boolean {
-    try {
-      // Определяем специальность для восстановления слота
-      if (!appointmentData.doctorSpecialty) {
-        console.error("Ошибка при разблокировке слота: не указана специальность");
-        return false;
-      }
-
-      const specialtySlug = appointmentData.doctorSpecialty.toLowerCase().replace(/[^a-zа-я0-9]/g, '');
-      
-      // Проверяем наличие кеша для данной специальности
-      if (!slotsCache[specialtySlug]) {
-        // Если кеша нет, создаем его
-        slotsCache[specialtySlug] = [];
-      }
-      
-      // Преобразуем данные записи в формат слота
-      const slotToRestore: AppointmentSlot = {
-        id: appointmentData.id,
-        datetime: appointmentData.datetime,
-        doctorName: appointmentData.doctorName || "",
-        doctorSpecialty: appointmentData.doctorSpecialty,
-        address: appointmentData.address,
-        cabinet: appointmentData.cabinet,
-        ticketNumber: appointmentData.ticketNumber
-      };
-      
-      // Добавляем слот в кеш, избегая дубликатов
-      const slotExists = slotsCache[specialtySlug].some(
-        (slot: AppointmentSlot) => slot.id === slotToRestore.id
-      );
-      
-      if (!slotExists) {
-        slotsCache[specialtySlug].push(slotToRestore);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Ошибка при разблокировке слота:", error);
-      return false;
-    }
-  }
-
-  public filterAvailableSlots(
-    slots: AppointmentSlot[],
-    bookedAppointments?: Appointment[]
-  ): AppointmentSlot[] {
-    // Фильтрация занятых слотов
-    return slots.filter(slot => !this.blockedSlots.includes(slot.id));
-  }
-
-  /**
-   * Получает доступные слоты для процедуры
-   * @param procedureSlug - слаг процедуры
-   * @returns массив доступных слотов
-   */
-  static async getProcedureSlots(procedureSlug: string): Promise<AppointmentSlot[]> {
-    // Имитация задержки сети
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    // Получаем слоты из data layer и сохраняем в кеш
-    if (!procedureSlotsCache[procedureSlug]) {
-      procedureSlotsCache[procedureSlug] = getProcedureSlots(procedureSlug)
-    }
-    
-    return [...procedureSlotsCache[procedureSlug]]
-  }
-
-  /**
-   * Создает новую запись на процедуру
-   * @param appointmentData - данные записи
-   * @returns созданная запись
-   */
-  static async createProcedureAppointment(appointmentData: AppointmentSlot): Promise<Appointment> {
-    // Имитация задержки сети
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Проверим, есть ли имя процедуры и добавим его, если необходимо
-    let procedureName = appointmentData.procedureName;
-    if (!procedureName && appointmentData.doctorSpecialty) {
-      procedureName = appointmentData.doctorSpecialty;
-    }
-    
-    // Форматируем дату и время для единообразия
-    const formattedDateTime = this.formatAppointmentDateTime(appointmentData.datetime);
-    
-    // В реальном API здесь был бы POST запрос
-    // В моковой версии просто возвращаем данные
-    return {
-      id: appointmentData.id,
-      datetime: formattedDateTime,
-      cabinet: appointmentData.cabinet,
-      address: appointmentData.address,
-      ticketNumber: appointmentData.ticketNumber,
-      procedureName: procedureName,
-      isProcedure: true
-    }
-  }
-
-  /**
-   * Блокирует слот процедуры в кеше после записи
-   * @param appointmentId - идентификатор слота
-   * @returns успех операции
-   */
-  static blockProcedureSlot(appointmentId: string): boolean {
-    // Проходим по всем сохраненным слотам и удаляем слот с указанным ID
-    Object.keys(procedureSlotsCache).forEach(procedureSlug => {
-      procedureSlotsCache[procedureSlug] = procedureSlotsCache[procedureSlug].filter(
-        (slot: AppointmentSlot) => slot.id !== appointmentId
-      )
-    })
-    
-    return true
-  }
-
-  /**
-   * Разблокирует слот процедуры в кеше после отмены записи
-   * @param appointmentData - данные записи для восстановления слота
-   * @returns успех операции
-   */
-  static unblockProcedureSlot(appointmentData: Appointment): boolean {
-    try {
-      // Определяем тип процедуры для восстановления слота
-      if (!appointmentData.procedureName) {
-        console.error("Ошибка при разблокировке слота процедуры: не указано название процедуры");
-        return false;
-      }
-
-      const procedureSlug = appointmentData.procedureName.toLowerCase().replace(/[^a-zа-я0-9]/g, '');
-      
-      // Проверяем наличие кеша для данной процедуры
-      if (!procedureSlotsCache[procedureSlug]) {
-        // Если кеша нет, создаем его
-        procedureSlotsCache[procedureSlug] = [];
-      }
-      
-      // Преобразуем данные записи в формат слота
-      const slotToRestore: AppointmentSlot = {
-        id: appointmentData.id,
-        datetime: appointmentData.datetime,
-        procedureName: appointmentData.procedureName,
-        address: appointmentData.address,
-        cabinet: appointmentData.cabinet,
-        ticketNumber: appointmentData.ticketNumber,
-        isProcedure: true
-      };
-      
-      // Добавляем слот в кеш, избегая дубликатов
-      const slotExists = procedureSlotsCache[procedureSlug].some(
-        (slot: AppointmentSlot) => slot.id === slotToRestore.id
-      );
-      
-      if (!slotExists) {
-        procedureSlotsCache[procedureSlug].push(slotToRestore);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Ошибка при разблокировке слота процедуры:", error);
-      return false;
-    }
-  }
-
-  /**
-   * Форматирует дату и время для корректного отображения
-   * @param datetime - строка с датой и временем
-   * @returns отформатированная строка даты и времени
+   * Форматирует дату и время записи для единообразия
+   * @param datetime - строка даты и времени
+   * @returns форматированная строка
    */
   static formatAppointmentDateTime(datetime: string): string {
     try {
-      // Если дата уже в нужном формате (YYYY-MM-DD HH:MM), возвращаем как есть
+      if (!datetime) return "";
+      
+      // Если формат уже YYYY-MM-DD HH:MM, оставляем как есть
       if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(datetime)) {
         return datetime;
       }
-
-      // Если дата в формате ISO (YYYY-MM-DDTHH:MM:SS)
-      if (datetime.includes('T')) {
-        const date = new Date(datetime);
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}`;
-      }
-
-      // Если дата в формате "день месяц HH:MM" (например, "4 марта 09:00")
-      if (datetime.includes(' ')) {
-        const parts = datetime.split(' ');
-        const timePart = parts[parts.length - 1];
-        const datePart = parts.slice(0, -1).join(' ');
-
-        const monthsRu = {
-          'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
-          'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11
-        };
-
-        const [day, monthName] = datePart.split(' ');
-        const month = monthsRu[monthName.toLowerCase() as keyof typeof monthsRu];
-        
-        if (!isNaN(Number(day)) && month !== undefined) {
-          const year = new Date().getFullYear();
-          const formattedDate = `${year}-${(month + 1).toString().padStart(2, '0')}-${Number(day).toString().padStart(2, '0')}`;
-          
-          if (/^\d{2}:\d{2}$/.test(timePart)) {
-            return `${formattedDate} ${timePart}`;
-          }
-        }
-      }
-
-      // Если не удалось распарсить, возвращаем как есть
-      return datetime;
+      
+      const date = new Date(datetime);
+      
+      // Форматируем дату в YYYY-MM-DD
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      
+      // Форматируем время в HH:MM
+      const hh = String(date.getHours()).padStart(2, '0');
+      const min = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
     } catch (error) {
-      console.error("Ошибка форматирования даты:", error);
-      return datetime;
+      console.error("Error formatting datetime:", error);
+      return datetime; // В случае ошибки возвращаем исходную строку
     }
   }
 } 

@@ -1,0 +1,299 @@
+{
+	"info": {
+		"_postman_id": "72c5fd4b-f971-4676-a2a7-8a65b8cb2f88",
+		"name": "HubServiceJson",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "GetDistrictList",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:1897/HubServiceJson.svc/GetDistrictList",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "1897",
+					"path": [
+						"HubServiceJson.svc",
+						"GetDistrictList"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "GetDistrictList",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"guid\":\"гуид\",\"idHistory\":53433}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://10.74.20.4:9095/HubServiceJson.svc/GetDistrictList",
+							"protocol": "http",
+							"host": [
+								"10",
+								"74",
+								"20",
+								"4"
+							],
+							"port": "9095",
+							"path": [
+								"HubServiceJson.svc",
+								"GetDistrictList"
+							]
+						}
+					},
+					"status": "Cannot process the message because the content type 'application/json' was not the expected type 'text/xml; charset=utf-8'.",
+					"code": 415,
+					"_postman_previewlanguage": "plain",
+					"header": [
+						{
+							"key": "Server",
+							"value": "Microsoft-IIS/10.0"
+						},
+						{
+							"key": "X-Powered-By",
+							"value": "ASP.NET"
+						},
+						{
+							"key": "Date",
+							"value": "Wed, 09 Apr 2025 11:01:32 GMT"
+						},
+						{
+							"key": "Content-Length",
+							"value": "0"
+						}
+					],
+					"cookie": [],
+					"body": null
+				}
+			]
+		},
+		{
+			"name": "GetLPUList",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"idDistrict\":\"74\",\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:1897/HubServiceJson.svc/GetLPUList",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "1897",
+					"path": [
+						"HubServiceJson.svc",
+						"GetLPUList"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetSpesialityList",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"idLpu\":\"1570\",\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:1897/HubServiceJson.svc/GetSpesialityList",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "1897",
+					"path": [
+						"HubServiceJson.svc",
+						"GetSpesialityList"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetDoctorList",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"idSpesiality\":\"1065\",\"idLpu\":\"1570\",\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:1897/HubServiceJson.svc/GetDoctorList",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "1897",
+					"path": [
+						"HubServiceJson.svc",
+						"GetDoctorList"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAvailableDates",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"idDoc\":\"3046\",\"idLpu\":\"1570\",\"startVisit\":\"/Date(1733086800000+0300)/\",\"endVisit\":\"/Date(1784086800000+0300)/\",\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:1897/HubServiceJson.svc/GetAvailableDates",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "1897",
+					"path": [
+						"HubServiceJson.svc",
+						"GetAvailableDates"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAvaibleAppointments",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"idDoc\":\"3046\",\"idLpu\":\"1570\",\"startVisit\":\"/Date(1733086800000+0300)/\",\"endVisit\":\"/Date(1784086800000+0300)/\",\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:1897/HubServiceJson.svc/GetAvaibleAppointments",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "1897",
+					"path": [
+						"HubServiceJson.svc",
+						"GetAvaibleAppointments"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "SetAppointment",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"idAppointment\":\"8708497\",\"idLpu\":\"1570\", \"idPat\":\"7453\",\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:1897/HubServiceJson.svc/SetAppointment",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "1897",
+					"path": [
+						"HubServiceJson.svc",
+						"SetAppointment"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "SearchTop10Patient",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"patient\":{\"CellPhone\":\"11111111111\", \"BirthYear\":\"1986\"},\"idLpu\":\"1570\",\"guid\":\"гуид\",\"idHistory\":53433}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://10.74.20.4:9095/HubServiceJson.svc/SearchTop10Patient",
+					"protocol": "http",
+					"host": [
+						"10",
+						"74",
+						"20",
+						"4"
+					],
+					"port": "9095",
+					"path": [
+						"HubServiceJson.svc",
+						"SearchTop10Patient"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

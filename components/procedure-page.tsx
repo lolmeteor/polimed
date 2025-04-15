@@ -12,12 +12,24 @@ import { AppointmentTicketModal } from "@/components/appointment-ticket-modal"
 import { useUser } from "@/context/user-context"
 import { AppointmentService } from "@/services/appointment-service"
 import { AppointmentSlot } from "@/types/appointment"
-import { directAccessProcedures } from "@/data/procedures"
+// удаляем импорт моковых данных
+// import { directAccessProcedures } from "@/data/procedures"
 import { toast } from "sonner"
 import { HeaderLogo } from "@/components/header-logo"
 import { BottomNav } from "@/components/bottom-nav"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+// Определяем список процедур, доступных без направления
+const directAccessProcedures = [
+  'blood-sampling',
+  'heart-ultrasound',
+  'abdominal-ultrasound',
+  'pelvic-ultrasound',
+  'leg-vessels-ultrasound',
+  'neck-vessels-ultrasound',
+  'external-respiration'
+]
 
 interface ProcedurePageProps {
   procedureName: string
@@ -175,10 +187,11 @@ export function ProcedurePage({ procedureName, procedureSlug }: ProcedurePagePro
     setIsLoading(true)
     
     try {
-      const availableSlots = await AppointmentService.getProcedureSlots(procedureSlug)
+      // Используем обычный метод getAvailableSlots вместо getProcedureSlots
+      const availableSlots = await AppointmentService.getAvailableSlots(procedureSlug)
       
       // Сортируем слоты по дате и времени
-      const sortedSlots = availableSlots.sort((a, b) => {
+      const sortedSlots = availableSlots.sort((a: AppointmentSlot, b: AppointmentSlot) => {
         // Преобразуем дату-время в сопоставимый формат
         const dateA = a.datetime.split(' ')[0];
         const dateB = b.datetime.split(' ')[0];
@@ -238,11 +251,8 @@ export function ProcedurePage({ procedureName, procedureSlug }: ProcedurePagePro
         isProcedure: true
       }
       
-      // Создаем запись через сервис
-      const newAppointment = await AppointmentService.createProcedureAppointment(procedureData)
-      
-      // Блокируем слот
-      AppointmentService.blockProcedureSlot(appointmentId)
+      // Создаем запись через сервис с использованием стандартного метода createAppointment
+      const newAppointment = await AppointmentService.createAppointment(procedureData)
       
       // Добавляем запись в контекст пользователя
       await addAppointment({ 
