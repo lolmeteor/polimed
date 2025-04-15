@@ -7,7 +7,8 @@ export const contactsStore: Record<string | number, {
   phoneNumber: string,
   firstName: string,
   lastName?: string,
-  contactUserId: number
+  contactUserId: number,
+  storedAt?: string
 }> = {}
 
 export async function GET(req: NextRequest) {

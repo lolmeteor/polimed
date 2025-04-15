@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { contactsStore } from "../telegram-contact/route"
+import { MisApiService } from "@/services/mis-api-service"
 
 // Используем токен бота из переменных окружения или устанавливаем актуальный
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "7749348003:AAHYr26BF2lm1fU3SdXaxDEAsz2XDnfOyxI"
@@ -111,6 +112,10 @@ export async function POST(request: Request) {
           ? contact.phone_number 
           : `+${contact.phone_number}`
 
+        // Получаем текущую дату и время
+        const now = new Date();
+        const timestamp = now.toISOString();
+
         // Сохраняем данные контакта
         contactsStore[senderId] = {
           telegramId: senderId,
@@ -118,16 +123,73 @@ export async function POST(request: Request) {
           firstName: contact.first_name,
           lastName: contact.last_name,
           contactUserId: contactUserId,
+          storedAt: timestamp
         }
 
         console.log("🔵 Webhook: Контакт сохранен в store:", contactsStore[senderId])
         console.log("🔵 Webhook: Текущее состояние store:", contactsStore)
         
-        // Отправляем подтверждение пользователю после успешного сохранения контакта
-        await sendMessage(
-          senderId, 
-          `Спасибо, ${contact.first_name}! Ваш номер телефона ${phoneNumber} успешно сохранен. Теперь вы можете использовать приложение.`
-        )
+        // Пытаемся найти пациента в МИС по номеру телефона
+        try {
+          // Формируем массив возможных форматов телефона
+          const phoneFormats = [];
+          phoneFormats.push(phoneNumber);
+          
+          // Только цифры
+          const digits = phoneNumber.replace(/\D/g, '');
+          phoneFormats.push(digits);
+          
+          // Добавляем варианты с разными кодами
+          if (digits.length === 10) {
+            phoneFormats.push(`+7${digits}`);
+            phoneFormats.push(`8${digits}`);
+          } else if (digits.length === 11) {
+            if (digits.startsWith('8')) {
+              phoneFormats.push(`+7${digits.substring(1)}`);
+            } else if (digits.startsWith('7')) {
+              phoneFormats.push(`+7${digits.substring(1)}`);
+              phoneFormats.push(`8${digits.substring(1)}`);
+            }
+          }
+          
+          let patientFound = false;
+          
+          // Пробуем последовательно найти пациента в разных форматах
+          for (const format of phoneFormats) {
+            try {
+              const searchResult = await MisApiService.searchPatient({ Phone: format });
+              
+              if (searchResult.Success && searchResult.Patients?.Patient) {
+                patientFound = true;
+                console.log(`🟢 Webhook: Найден пациент в МИС с номером ${format}:`, searchResult);
+                break;
+              }
+            } catch (err) {
+              console.warn(`🟡 Webhook: Ошибка при поиске пациента с номером ${format}:`, err);
+            }
+          }
+          
+          // Отправляем подтверждение пользователю после успешного сохранения контакта
+          if (patientFound) {
+            await sendMessage(
+              senderId, 
+              `Спасибо, ${contact.first_name}! Ваш номер телефона ${phoneNumber} успешно сохранен и найден в базе клиники. Теперь вы можете использовать приложение.`
+            );
+          } else {
+            await sendMessage(
+              senderId, 
+              `Спасибо, ${contact.first_name}! Ваш номер телефона ${phoneNumber} успешно сохранен, но не найден в базе клиники. Пожалуйста, обратитесь в регистратуру.`
+            );
+          }
+        } catch (error) {
+          console.error("🔴 Webhook: Ошибка при проверке пациента в МИС:", error);
+          
+          // Отправляем стандартное сообщение в случае ошибки
+          await sendMessage(
+            senderId, 
+            `Спасибо, ${contact.first_name}! Ваш номер телефона ${phoneNumber} успешно сохранен. Теперь вы можете использовать приложение.`
+          );
+        }
       } else {
         console.log("🔵 Webhook: Контакт не принадлежит отправителю", { contactUserId, senderId })
         

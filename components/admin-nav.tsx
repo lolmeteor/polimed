@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Activity, Settings, User } from "lucide-react";
+import { Home, Activity, Settings, User, Search, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,16 @@ export function AdminNav() {
       name: "Статус систем",
       href: "/admin/status",
       icon: Activity,
+    },
+    {
+      name: "Поиск пациентов",
+      href: "/admin/patient-search",
+      icon: Search,
+    },
+    {
+      name: "Контакты Telegram",
+      href: "/admin/telegram-contacts",
+      icon: MessageCircle,
     },
     {
       name: "Настройки",
