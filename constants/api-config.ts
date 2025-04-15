@@ -9,7 +9,7 @@ export const MIS_API_CONFIG = {
   TOKEN_URL: process.env.MIS_TOKEN_URL || 'http://172.25.144.11/api/token',
   
   // GUID для авторизации запросов
-  GUID: process.env.MIS_GUID || 'гуид', // Заменить на реальный GUID при интеграции
+  GUID: process.env.MIS_GUID || '5aa5aa80-24ed-44b0-8f64-3e71253069b1',
   
   // ID ЛПУ по умолчанию
   DEFAULT_LPU_ID: process.env.MIS_DEFAULT_LPU_ID || '1570'
