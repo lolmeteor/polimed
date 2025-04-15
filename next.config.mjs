@@ -43,6 +43,29 @@ const nextConfig = {
         os: false,
         events: false
       };
+      
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'node:crypto': 'crypto',
+        'node:fs': false,
+        'node:fs/promises': false,
+        'node:events': false,
+        'node:os': false,
+        'node:stream': false,
+        'node:buffer': false,
+        'node:util': false,
+        'node:path': false,
+        'node:url': false,
+        'node:http': false,
+        'node:https': false,
+        'node:zlib': false,
+        'node:querystring': false,
+        'node:string_decoder': false,
+        'node:punycode': false,
+        'node:process': false,
+        'node:timers': false,
+        'node:child_process': false
+      };
     }
     
     return config;
