@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import { MisApiService } from '@/services/mis-api-service';
 import { MisMappingService } from '@/services/mis-mapping-service';
+import { MIS_API_CONFIG } from '@/constants/api-config';
+
+// Указываем, что этот роут должен использовать полный Node.js runtime
+export const runtime = 'nodejs';
 
 // Кеш для хранения специальностей, чтобы не запрашивать каждый раз
 let specialtiesCache: any[] = [];
 let lastFetchTime = 0;
 const CACHE_TTL = 5 * 60 * 1000; // 5 минут в миллисекундах
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const lpuId = searchParams.get('lpuId') || MIS_API_CONFIG.DEFAULT_LPU_ID;
+    
     const now = Date.now();
     
     // Используем кеш, если он не устарел
@@ -16,10 +23,7 @@ export async function GET() {
       return NextResponse.json(specialtiesCache);
     }
     
-    // Для демонстрации используем фиксированный ID ЛПУ
-    const lpuId = "1570"; // ID, которое указано в примере Postman
-    
-    // Получаем список специальностей из API МИС
+    // Получаем список специальностей из SOAP API
     const response = await MisApiService.getSpecialityList(lpuId);
     
     // Если запрос не успешен, возвращаем ошибку
@@ -41,7 +45,7 @@ export async function GET() {
     lastFetchTime = now;
     
     return NextResponse.json(specialties);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/specialties:', error);
     
     // В случае ошибки возвращаем моковые данные

@@ -10,7 +10,9 @@ import { SuccessModal } from "@/components/success-modal"
 import { ReferralCheck } from "@/components/referral-check"
 import { AppointmentTicketModal } from "@/components/appointment-ticket-modal"
 import { useUser } from "@/context/user-context"
-import { AppointmentService } from "@/services/appointment-service"
+// Заменяем импорт AppointmentService на ApiAdapter
+// import { AppointmentService } from "@/services/appointment-service"
+import { ApiAdapter } from "@/services/api-adapter"
 import { AppointmentSlot } from "@/types/appointment"
 // удаляем импорт моковых данных
 // import { directAccessProcedures } from "@/data/procedures"
@@ -187,8 +189,8 @@ export function ProcedurePage({ procedureName, procedureSlug }: ProcedurePagePro
     setIsLoading(true)
     
     try {
-      // Используем обычный метод getAvailableSlots вместо getProcedureSlots
-      const availableSlots = await AppointmentService.getAvailableSlots(procedureSlug)
+      // Используем ApiAdapter вместо AppointmentService
+      const availableSlots = await ApiAdapter.getAvailableSlots(procedureSlug)
       
       // Сортируем слоты по дате и времени
       const sortedSlots = availableSlots.sort((a: AppointmentSlot, b: AppointmentSlot) => {
@@ -251,8 +253,8 @@ export function ProcedurePage({ procedureName, procedureSlug }: ProcedurePagePro
         isProcedure: true
       }
       
-      // Создаем запись через сервис с использованием стандартного метода createAppointment
-      const newAppointment = await AppointmentService.createAppointment(procedureData)
+      // Используем ApiAdapter вместо AppointmentService
+      const newAppointment = await ApiAdapter.createAppointment(procedureData)
       
       // Добавляем запись в контекст пользователя
       await addAppointment({ 

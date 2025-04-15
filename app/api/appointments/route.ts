@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { AppointmentService } from '@/services/appointment-service';
 import { AppointmentSlot } from '@/types/appointment';
+import { MisApiService } from '@/services/mis-api-service';
+import { MIS_API_CONFIG } from '@/constants/api-config';
+
+// Указываем, что этот роут должен использовать полный Node.js runtime
+export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
@@ -27,10 +32,8 @@ export async function POST(request: Request) {
       isProcedure: data.isProcedure
     };
     
-    // Создаем запись через сервис
-    const appointment = data.isProcedure 
-      ? await AppointmentService.createProcedureAppointment(appointmentSlot)
-      : await AppointmentService.createAppointment(appointmentSlot);
+    // Создаем запись через сервис (убираем ссылку на несуществующий метод)
+    const appointment = await AppointmentService.createAppointment(appointmentSlot);
     
     return NextResponse.json(appointment);
   } catch (error: any) {
@@ -80,23 +83,50 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const profileId = searchParams.get('profileId');
+    const doctorId = searchParams.get('doctorId');
+    const startDateStr = searchParams.get('startDate');
+    const endDateStr = searchParams.get('endDate');
+    const specialtySlug = searchParams.get('specialtySlug');
     
-    if (!profileId) {
-      return NextResponse.json(
-        { error: 'ID профиля не указан' }, 
-        { status: 400 }
-      );
+    // Получение истории записей
+    if (profileId) {
+      const appointments = await AppointmentService.getAppointmentHistory(profileId);
+      return NextResponse.json(appointments);
     }
     
-    // Получаем историю записей для профиля
-    const appointments = await AppointmentService.getAppointmentHistory(profileId);
+    // Получение доступных слотов для специальности
+    else if (specialtySlug) {
+      const slots = await AppointmentService.getAvailableSlots(specialtySlug);
+      return NextResponse.json(slots);
+    }
     
-    return NextResponse.json(appointments);
+    // Получение доступных слотов по врачу (прямой вызов SOAP API)
+    else if (doctorId && startDateStr && endDateStr) {
+      const startDate = new Date(startDateStr);
+      const endDate = new Date(endDateStr);
+      const lpuId = MIS_API_CONFIG.DEFAULT_LPU_ID;
+      
+      // Вызов SOAP-сервиса для получения слотов
+      const misResponse = await MisApiService.getAvailableAppointments(
+        lpuId, 
+        doctorId, 
+        startDate, 
+        endDate
+      );
+      
+      // Здесь можно добавить преобразование ответа от MIS в нужный формат
+      return NextResponse.json(misResponse);
+    }
+    
+    return NextResponse.json(
+      { error: 'Не указаны необходимые параметры' }, 
+      { status: 400 }
+    );
   } catch (error: any) {
     console.error('Error in GET /api/appointments:', error);
     
     return NextResponse.json(
-      { error: error.message || 'Ошибка при получении истории записей' }, 
+      { error: error.message || 'Ошибка при запросе' }, 
       { status: 500 }
     );
   }

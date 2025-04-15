@@ -1,54 +1,43 @@
 import { NextResponse } from 'next/server';
 import { MisApiService } from '@/services/mis-api-service';
+import { MisMappingService } from '@/services/mis-mapping-service';
+import { MIS_API_CONFIG } from '@/constants/api-config';
+
+// Указываем, что этот роут должен использовать полный Node.js runtime
+export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
     const data = await request.json();
     
-    // Проверяем наличие хотя бы одного параметра для поиска
-    if (Object.keys(data).length === 0) {
+    // Проверяем наличие необходимых полей
+    if (!data.lastName || !data.firstName || !data.birthDate) {
       return NextResponse.json(
-        { error: 'Необходимо указать хотя бы один параметр для поиска' }, 
+        { error: 'Не все обязательные поля указаны' }, 
         { status: 400 }
       );
     }
     
-    // Для демонстрации используем фиксированный ID ЛПУ
-    const lpuId = data.lpuId || "1570"; // ID, которое указано в примере Postman
+    // Готовим данные пациента для поиска
+    const patientData = {
+      LastName: data.lastName,
+      FirstName: data.firstName,
+      MiddleName: data.middleName || "",
+      BirthDate: data.birthDate // Формат: /Date(timestamp+offset)/
+    };
     
-    // Ищем пациентов через API МИС
-    const response = await MisApiService.searchPatient(data, lpuId);
+    // Ищем пациента через SOAP API
+    const response = await MisApiService.searchPatient(patientData);
     
-    // Если запрос не успешен, возвращаем ошибку
-    if (!response.Success) {
-      const errors = response.ErrorList?.Error;
-      const errorMessage = Array.isArray(errors) 
-        ? errors.map(e => e.ErrorDescription).join('; ')
-        : errors?.ErrorDescription || 'Неизвестная ошибка при поиске пациентов';
-      
-      console.error('Error searching patients:', errorMessage);
-      return NextResponse.json({ error: errorMessage }, { status: 400 });
-    }
+    // Преобразуем в формат, удобный для приложения
+    const patients = MisMappingService.mapSearchPatientResult(response);
     
-    // Если пациенты найдены, возвращаем их
-    if (response.Patients) {
-      const patients = Array.isArray(response.Patients.Patient) 
-        ? response.Patients.Patient 
-        : [response.Patients.Patient];
-      
-      return NextResponse.json(patients);
-    } else if (response.IdPat) {
-      // Если найден только идентификатор пациента
-      return NextResponse.json([{ IdPat: response.IdPat }]);
-    }
-    
-    // Если пациенты не найдены, возвращаем пустой массив
-    return NextResponse.json([]);
+    return NextResponse.json(patients);
   } catch (error: any) {
     console.error('Error in POST /api/patients:', error);
     
     return NextResponse.json(
-      { error: error.message || 'Ошибка при поиске пациентов' }, 
+      { error: error.message || 'Ошибка при поиске пациента' }, 
       { status: 500 }
     );
   }

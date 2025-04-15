@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { AppointmentService } from '@/services/appointment-service';
 
+// Указываем, что этот роут должен использовать полный Node.js runtime
+export const runtime = 'nodejs';
+
 export async function GET(
   request: Request,
   { params }: { params: { specialty: string } }
@@ -10,12 +13,12 @@ export async function GET(
     
     if (!specialty) {
       return NextResponse.json(
-        { error: 'Specialty parameter is required' }, 
+        { error: 'Специальность не указана' }, 
         { status: 400 }
       );
     }
     
-    // Получаем доступные слоты для указанной специальности
+    // Получаем доступные слоты для данной специальности или процедуры
     const slots = await AppointmentService.getAvailableSlots(specialty);
     
     return NextResponse.json(slots);

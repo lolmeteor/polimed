@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { UserProfile } from "@/types/user"
 import { Appointment, AppointmentSlot } from "@/types/appointment"
-import { AppointmentService } from "@/services/appointment-service"
+import { ApiAdapter } from "@/services/api-adapter"
 import { ReferralService, ReferralType } from "@/services/referral-service"
 
 // Определяем тип для контекста пользователя
@@ -259,120 +259,74 @@ export function UserProvider({ children }: { children: ReactNode }) {
               parseInt(timePart.split(':')[0]), parseInt(timePart.split(':')[1]));
           }
         } else {
-          // Если формат непонятен, используем текущую дату (но это не должно происходить)
+          // Если формат неизвестен, используем текущую дату
+          console.warn("Неизвестный формат даты, используем текущую дату");
           newAppointmentDate = new Date();
-          console.error("Неизвестный формат даты:", newAppointmentDateTime);
         }
-      } catch (error) {
-        console.error("Ошибка при парсинге даты записи:", error);
+      } catch (err) {
+        console.error("Ошибка при парсинге даты:", err);
         newAppointmentDate = new Date();
       }
       
-      // Проверка наличия существующей записи на то же время
+      // Проверяем наличие перекрывающихся записей
       if (userProfile.appointments && userProfile.appointments.length > 0) {
-        const conflictingAppointment = userProfile.appointments.find(app => {
-          // Парсим дату существующей записи
-          let existingAppDate: Date;
+        const hasConflict = userProfile.appointments.some(appointment => {
           try {
-            const existingDateTime = app.datetime;
+            const existingDateTime = appointment.datetime;
             const parts = existingDateTime.split(' ');
-            if (parts.length === 2) {
-              // Формат "YYYY-MM-DD HH:MM"
-              existingAppDate = new Date(`${parts[0]}T${parts[1]}`);
-            } else {
-              // Если формат другой (неожиданный), пропускаем эту запись
-              return false;
-            }
+            if (parts.length !== 2) return false;
             
-            // Проверяем совпадение даты и времени с погрешностью ±30 минут
-            // Это позволит исключить запись на перекрывающиеся временные слоты
-            const timeDiffMs = Math.abs(existingAppDate.getTime() - newAppointmentDate.getTime());
+            const existingDateTime2 = new Date(`${parts[0]}T${parts[1]}`);
+            const timeDiff = Math.abs(existingDateTime2.getTime() - newAppointmentDate.getTime());
+            
             // 30 минут в миллисекундах = 30 * 60 * 1000 = 1 800 000
-            return timeDiffMs < 1800000;
-            
-          } catch (error) {
-            console.error("Ошибка при сравнении дат:", error);
+            // Если разница во времени меньше 30 минут, считаем что есть конфликт
+            return timeDiff < 1800000;
+          } catch (err) {
+            console.error("Ошибка при проверке конфликта времени:", err);
             return false;
           }
         });
         
-        if (conflictingAppointment) {
-          // Если найдена запись на то же время (±30 минут)
-          const errorMessage = `У вас уже есть запись к ${conflictingAppointment.doctorSpecialty || 'специалисту'} ${conflictingAppointment.doctorName || ''} на ${conflictingAppointment.datetime}. Выберите другое время для записи.`;
-          throw new Error(errorMessage);
+        if (hasConflict) {
+          throw new Error("У вас уже есть запись на это время или близкое к нему. Выберите другое время.");
         }
       }
       
-      // Проверка наличия существующей записи к этому же специалисту/на такую же процедуру
-      if (userProfile.appointments && userProfile.appointments.length > 0) {
-        const existingAppointment = userProfile.appointments.find(app => {
-          if (isProcedure) {
-            // Для процедур сравниваем по названию процедуры
-            return app.isProcedure && app.procedureName === appointmentData.procedureName;
-          } else {
-            // Для специалистов сравниваем по специальности
-            return !app.isProcedure && app.doctorSpecialty === appointmentData.doctorSpecialty;
-          }
-        });
-        
-        if (existingAppointment) {
-          // Если уже есть запись к этому специалисту или на эту процедуру
-          const errorMessage = isProcedure 
-            ? `У вас уже есть запись на процедуру "${appointmentData.procedureName}". Для создания новой записи сначала удалите существующую.`
-            : `У вас уже есть запись к специалисту "${appointmentData.doctorSpecialty}". Для создания новой записи сначала удалите существующую.`;
-          
-          throw new Error(errorMessage);
-        }
-      }
-      
-      // Создаем запись через соответствующий сервис
+      // Создаем новую запись через API
       let newAppointment: Appointment;
       
-      if (isProcedure) {
-        // Для процедур используем метод createProcedureAppointment
-        newAppointment = await AppointmentService.createProcedureAppointment(appointmentData);
-        // Блокируем слот в списке процедур
-        await AppointmentService.blockProcedureSlot(appointmentData.id);
-      } else {
-        // Для врачей используем метод createAppointment
-        newAppointment = await AppointmentService.createAppointment(appointmentData);
-        // Блокируем слот во всех списках специалистов
-        await AppointmentService.blockAppointmentSlot(appointmentData.id);
-      }
+      // Используем единый API-метод вместо разных для процедур и врачей
+      newAppointment = await ApiAdapter.createAppointment(appointmentData);
       
-      // Получаем текущие записи и добавляем новую
-      const currentAppointments = userProfile.appointments || [];
-      const updatedAppointments = sortAppointmentsByDateTime([...currentAppointments, newAppointment]);
+      // Обновляем список записей в профиле пользователя
+      const updatedAppointments = userProfile.appointments
+        ? [...userProfile.appointments, newAppointment]
+        : [newAppointment];
+      
+      // Сортируем записи по дате и времени
+      const sortedAppointments = sortAppointmentsByDateTime(updatedAppointments);
       
       // Обновляем профиль пользователя
-      const updatedProfile = {
+      setUserProfile({
         ...userProfile,
-        appointments: updatedAppointments
-      };
-
-      // Обновляем профиль в списке доступных профилей
-      const updatedProfiles = availableProfiles.map(profile => {
-        if (profile.id === userProfile.id) {
-          return {
-            ...profile,
-            appointments: updatedAppointments
-          };
-        }
-        return profile;
+        appointments: sortedAppointments
       });
-
-      // Сначала обновляем состояние
-      setUserProfileState(updatedProfile);
-      setAvailableProfilesState(updatedProfiles);
-
-      // Затем сохраняем в localStorage
-      try {
-        localStorage.setItem("selectedProfile", JSON.stringify(updatedProfile));
-        localStorage.setItem("availableProfiles", JSON.stringify(updatedProfiles));
-      } catch (storageError) {
-        console.error("Ошибка при сохранении в localStorage:", storageError);
+      
+      // Обновляем список доступных профилей
+      if (availableProfiles.length > 0) {
+        setAvailableProfiles(
+          availableProfiles.map(profile => {
+            if (profile.id === userProfile.id) {
+              return {
+                ...profile,
+                appointments: sortedAppointments
+              };
+            }
+            return profile;
+          })
+        );
       }
-
     } catch (error) {
       console.error("Ошибка при добавлении записи:", error);
       throw error;
@@ -382,91 +336,49 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   // Функция для отмены записи на прием
-  const cancelAppointment = async (appointmentId: string) => {
-    if (!userProfile) {
-      console.error("Ошибка: профиль пользователя не найден при отмене записи");
-      throw new Error("Профиль пользователя не найден");
-    }
+  const cancelAppointment = async (appointmentId: string): Promise<boolean> => {
+    if (!userProfile) return false;
     
-    if (!userProfile.appointments || userProfile.appointments.length === 0) {
-      console.error("Ошибка: у пользователя нет записей для отмены");
-      throw new Error("У пользователя нет записей для отмены");
-    }
-
-    // Проверяем существование записи с указанным ID
-    const appointment = userProfile.appointments.find(app => app.id === appointmentId);
-    if (!appointment) {
-      console.error(`Ошибка: запись с ID ${appointmentId} не найдена`);
-      throw new Error("Запись не найдена");
-    }
-
     try {
+      setIsLoading(true);
+      
       // Отменяем запись через сервис
-      const success = await AppointmentService.cancelAppointment(appointmentId);
+      // Используем ApiAdapter вместо AppointmentService
+      const success = await ApiAdapter.cancelAppointment(appointmentId);
       
-      if (!success) {
-        console.error("Сервис отмены записи вернул неуспешный результат");
-        throw new Error("Не удалось отменить запись");
-      }
-
-      // Возвращаем слот в пул доступных
-      if (appointment.isProcedure) {
-        // Если это запись на процедуру
-        await AppointmentService.unblockProcedureSlot(appointment);
-      } else {
-        // Если это запись к специалисту
-        await AppointmentService.unblockAppointmentSlot(appointment);
-      }
-
-      // Создаем обновленный массив записей без удаленной записи
-      const updatedAppointments = userProfile.appointments.filter(
-        app => app.id !== appointmentId
-      );
-      
-      console.log(`Запись ${appointmentId} отменена. Осталось записей: ${updatedAppointments.length}`);
-      
-      // Обновляем профиль пользователя с новым массивом записей
-      const updatedProfile = {
-        ...userProfile,
-        appointments: updatedAppointments
-      };
-
-      // Создаем обновленный массив профилей
-      const updatedProfiles = availableProfiles.map(profile => {
-        if (profile.id === userProfile.id) {
-          // Если это тот же профиль, обновляем его записи
-          return {
-            ...profile,
-            appointments: updatedAppointments
-          };
+      if (success) {
+        // Обновляем список записей в профиле пользователя
+        const updatedAppointments = userProfile.appointments
+          ? userProfile.appointments.filter(appointment => appointment.id !== appointmentId)
+          : [];
+        
+        setUserProfile({
+          ...userProfile,
+          appointments: updatedAppointments
+        });
+        
+        // Обновляем список доступных профилей
+        if (availableProfiles.length > 0) {
+          setAvailableProfiles(
+            availableProfiles.map(profile => {
+              if (profile.id === userProfile.id) {
+                return {
+                  ...profile,
+                  appointments: updatedAppointments
+                };
+              }
+              return profile;
+            })
+          );
         }
-        return profile;
-      });
-      
-      // Последовательно обновляем состояние (сначала доступные профили, затем текущий)
-      setAvailableProfilesState(updatedProfiles);
-      
-      // Сохраняем обновленные профили в localStorage
-      try {
-        localStorage.setItem("availableProfiles", JSON.stringify(updatedProfiles));
-      } catch (storageError) {
-        console.error("Ошибка при сохранении профилей в localStorage:", storageError);
       }
       
-      // Обновляем текущий профиль
-      setUserProfileState(updatedProfile);
-      
-      // Сохраняем обновленный профиль в localStorage
-      try {
-        localStorage.setItem("selectedProfile", JSON.stringify(updatedProfile));
-      } catch (storageError) {
-        console.error("Ошибка при сохранении профиля в localStorage:", storageError);
-      }
-      
-      return true;
+      return success;
     } catch (error) {
       console.error("Ошибка при отмене записи:", error);
-      throw error;
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
