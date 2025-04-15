@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, User, Phone, MessageCircle } from "lucide-react";
+import { Loader2, User, Phone, MessageCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 export default function DebugAuthPage() {
@@ -69,6 +69,19 @@ export default function DebugAuthPage() {
         Используйте эту форму для ручной авторизации в системе
       </p>
 
+      <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
+        <div className="flex items-start">
+          <AlertTriangle className="h-5 w-5 text-amber-600 mr-2 mt-0.5" />
+          <div>
+            <h3 className="font-medium text-amber-800">Внимание! Режим демонстрации</h3>
+            <p className="text-amber-700 text-sm mt-1">
+              В данный момент система работает в демонстрационном режиме. МИС может быть недоступна или 
+              работать с тестовыми данными. Авторизация будет успешной даже если пациент не найден в МИС.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <Card>
         <form onSubmit={handleSubmit}>
           <CardHeader>
@@ -118,7 +131,7 @@ export default function DebugAuthPage() {
                 />
               </div>
               <p className="text-sm text-muted-foreground">
-                Укажите номер телефона в любом формате, система попробует найти его в МИС
+                Укажите номер телефона в любом формате. В демо-режиме поиск в МИС может не работать.
               </p>
             </div>
 
@@ -150,7 +163,7 @@ export default function DebugAuthPage() {
               <div className="p-4 bg-green-50 text-green-600 rounded-md">
                 Авторизация успешно выполнена. {result?.patientFound 
                   ? 'Пациент найден в МИС.' 
-                  : 'Пациент НЕ найден в МИС.'}
+                  : 'Пациент НЕ найден в МИС, но данные сохранены для демонстрации.'}
               </div>
             )}
           </CardContent>
