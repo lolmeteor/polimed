@@ -122,15 +122,63 @@ export async function POST(request: Request) {
 
         console.log("🔵 Webhook: Контакт сохранен в store:", contactsStore[senderId])
         console.log("🔵 Webhook: Текущее состояние store:", contactsStore)
+        
+        // Отправляем подтверждение пользователю после успешного сохранения контакта
+        await sendMessage(
+          senderId, 
+          `Спасибо, ${contact.first_name}! Ваш номер телефона ${phoneNumber} успешно сохранен. Теперь вы можете использовать приложение.`
+        )
       } else {
         console.log("🔵 Webhook: Контакт не принадлежит отправителю", { contactUserId, senderId })
+        
+        // Отправляем сообщение об ошибке
+        await sendMessage(
+          update.message.from.id,
+          "Пожалуйста, предоставьте доступ к своему контакту, а не контакту другого пользователя."
+        )
       }
+    } else if (update.message?.text === "/start") {
+      // Отправляем приветственное сообщение при команде /start
+      await sendMessage(
+        update.message.from.id,
+        "Добро пожаловать в Полимедика бот! Пожалуйста, предоставьте свой контакт для авторизации."
+      )
     }
 
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error("🔴 Webhook: Ошибка при обработке вебхука Telegram:", error)
     return NextResponse.json({ error: "Failed to process Telegram webhook" }, { status: 500 })
+  }
+}
+
+// Функция для отправки текстового сообщения
+async function sendMessage(chatId: number | string, text: string) {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text,
+        parse_mode: "HTML"
+      }),
+    })
+
+    const data = await response.json()
+    
+    if (!response.ok || !data.ok) {
+      console.error("🔴 Ошибка при отправке сообщения:", data)
+      throw new Error(data.description || "Failed to send message")
+    }
+    
+    console.log("🔵 Сообщение успешно отправлено:", { chatId, text: text.substring(0, 50) + (text.length > 50 ? '...' : '') })
+    return data
+  } catch (error) {
+    console.error("🔴 Ошибка при отправке сообщения:", error)
+    throw error
   }
 }
 

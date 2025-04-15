@@ -20,8 +20,8 @@ const doctorCache: Record<string, { id: string, name: string, info?: string, pho
  */
 export class AppointmentService {
   /**
-   * Получает доступные слоты записи для указанной специальности
-   * @param specialtySlug - слаг специальности
+   * Получает доступные слоты записи для указанной специальности или процедуры
+   * @param specialtySlug - слаг специальности или процедуры
    * @returns массив доступных слотов
    */
   static async getAvailableSlots(specialtySlug: string): Promise<AppointmentSlot[]> {
@@ -29,7 +29,39 @@ export class AppointmentService {
     if (slotsCache[specialtySlug]) {
       return [...slotsCache[specialtySlug]];
     }
-
+    
+    // Проверяем, является ли запрос процедурой
+    const isProcedure = specialtySlug.startsWith('procedure-');
+    
+    if (isProcedure) {
+      // Для процедур используем логику получения слотов через подходящие специальности
+      // Получаем ID процедуры из слага
+      const procedureId = specialtySlug.replace('procedure-', '');
+      
+      // Если это процедура, получаем слоты для соответствующей специальности
+      // Например, для УЗИ используем слоты терапевта
+      // В реальном приложении нужна таблица соответствия процедур и специальностей
+      const mappedSpecialtySlug = this.mapProcedureToSpecialty(procedureId);
+      
+      // Рекурсивно вызываем метод для получения слотов по специальности
+      const slots = await this.getAvailableSlots(mappedSpecialtySlug);
+      
+      // Модифицируем слоты, добавляя информацию о процедуре
+      const procedureSlots = slots.map(slot => ({
+        ...slot,
+        isProcedure: true,
+        procedureName: this.getProcedureName(procedureId),
+        // Очищаем информацию о враче для процедур
+        doctorName: 'Специалист',
+        doctorSpecialty: this.getProcedureName(procedureId)
+      }));
+      
+      // Сохраняем в кеш
+      slotsCache[specialtySlug] = procedureSlots;
+      return [...procedureSlots];
+    }
+    
+    // Стандартная логика для специальностей
     // Если в кеше нет данных о специальностях, загружаем их
     if (specialtyCache.length === 0) {
       await this.loadSpecialties();
@@ -335,5 +367,41 @@ export class AppointmentService {
       console.error("Error formatting datetime:", error);
       return datetime; // В случае ошибки возвращаем исходную строку
     }
+  }
+
+  /**
+   * Сопоставляет ID процедуры с соответствующей специальностью
+   * @param procedureId - ID процедуры
+   * @returns слаг специальности
+   */
+  private static mapProcedureToSpecialty(procedureId: string): string {
+    // Временная жесткая привязка процедур к специальностям
+    const procedureMap: Record<string, string> = {
+      'uzi': 'terapevt',
+      'ekg': 'kardiolog',
+      'analizy': 'terapevt',
+      'diagnostika': 'terapevt',
+      'default': 'terapevt'
+    };
+    
+    return procedureMap[procedureId] || procedureMap.default;
+  }
+  
+  /**
+   * Возвращает название процедуры по её ID
+   * @param procedureId - ID процедуры
+   * @returns название процедуры
+   */
+  private static getProcedureName(procedureId: string): string {
+    // Временное сопоставление ID и названий процедур
+    const procedureNames: Record<string, string> = {
+      'uzi': 'УЗИ',
+      'ekg': 'ЭКГ',
+      'analizy': 'Анализы',
+      'diagnostika': 'Диагностика',
+      'default': 'Процедура'
+    };
+    
+    return procedureNames[procedureId] || procedureNames.default;
   }
 } 
