@@ -6,21 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 
 /**
- * Компонент-индикатор статуса подключения к МИС
+ * Компонент-индикатор статуса подключения к Telegram API
  */
-export function MisStatusIndicator() {
+export function TelegramStatusIndicator() {
   const [status, setStatus] = useState<"checking" | "connected" | "error">("checking");
-  const [message, setMessage] = useState<string>("Проверка подключения к МИС...");
+  const [message, setMessage] = useState<string>("Проверка подключения к Telegram...");
   const [isChecking, setIsChecking] = useState<boolean>(true);
+  const [botInfo, setBotInfo] = useState<{
+    id?: number;
+    username?: string;
+    first_name?: string;
+  } | null>(null);
 
-  const checkMisStatus = async () => {
+  const checkTelegramStatus = async () => {
     try {
       setIsChecking(true);
       setStatus("checking");
-      setMessage("Проверка подключения к МИС...");
+      setMessage("Проверка подключения к Telegram...");
+      setBotInfo(null);
 
-      const response = await fetch("/api/mis-status", {
-        // Добавляем кэширование, чтобы избежать проблем при сборке
+      const response = await fetch("/api/telegram-status", {
         cache: "no-store"
       });
       
@@ -29,7 +34,7 @@ export function MisStatusIndicator() {
       if (!response.ok) {
         if (response.status === 404) {
           setStatus("error");
-          setMessage("API роут /api/mis-status не найден. Возможно, приложение не полностью развернуто.");
+          setMessage("API роут /api/telegram-status не найден. Возможно, приложение не полностью развернуто.");
           return;
         }
       }
@@ -38,15 +43,15 @@ export function MisStatusIndicator() {
 
       if (response.ok && data.status === "connected") {
         setStatus("connected");
+        setBotInfo(data.data);
         setMessage(
-          `Подключение к МИС работает. Доступно районов: ${data.data?.districtsCount || 0}`
+          `Подключение к Telegram API работает. Бот: @${data.data?.username || "unknown"}`
         );
       } else {
         setStatus("error");
         setMessage(`Ошибка подключения: ${data.error || "Неизвестная ошибка"}`);
       }
     } catch (error) {
-      // Если произошло исключение при получении результата, показываем более дружественное сообщение
       setStatus("error");
       setMessage(`Не удалось выполнить проверку. ${error instanceof Error ? error.message : "Проверьте подключение к серверу"}`);
     } finally {
@@ -57,7 +62,7 @@ export function MisStatusIndicator() {
   useEffect(() => {
     // Отложенный запуск проверки, чтобы избежать проблем при сборке на Vercel
     const timer = setTimeout(() => {
-      checkMisStatus();
+      checkTelegramStatus();
     }, 500);
     
     return () => clearTimeout(timer);
@@ -78,10 +83,18 @@ export function MisStatusIndicator() {
         </div>
       </Alert>
       
+      {botInfo && status === "connected" && (
+        <div className="text-sm mt-2 space-y-1">
+          <div><strong>ID бота:</strong> {botInfo.id}</div>
+          <div><strong>Имя бота:</strong> {botInfo.first_name}</div>
+          <div><strong>Username:</strong> @{botInfo.username}</div>
+        </div>
+      )}
+      
       <Button 
         variant="outline" 
         size="sm" 
-        onClick={checkMisStatus} 
+        onClick={checkTelegramStatus} 
         disabled={isChecking}
         className="flex items-center gap-2"
       >
