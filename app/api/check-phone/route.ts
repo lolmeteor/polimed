@@ -94,6 +94,9 @@ export async function POST(request: Request) {
   }
 }
 
+// Дополнительно экспортируем функцию обработчика для создания app/app/api/check-phone в middleware
+export { POST as handlePhoneCheck }
+
 // Функция для расчета возраста по дате рождения
 function calculateAge(birthDate: string): number {
   if (!birthDate) return 0;
