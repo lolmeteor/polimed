@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server";
-import hubServiceClient from "@/services/hub-service-client";
+import { soapService } from "@/services/soap-service";
+
+// Интерфейс для представления пациента из SOAP-ответа
+interface SoapPatient {
+  IdPat?: string;
+  FirstName?: string;
+  SecondName?: string;
+  LastName?: string;
+  BirthDate?: string;
+  [key: string]: any; // Для других возможных полей
+}
 
 export async function POST(request: Request) {
   try {
@@ -26,36 +36,37 @@ export async function POST(request: Request) {
         formattedPhone = digits; // В случае, если оттуда уже убран префикс +7 при удалении нецифровых символов
       }
       
-      console.log("Проверяем номер телефона в МИС:", formattedPhone, "Исходный номер:", phoneNumber);
+      console.log("Проверяем номер телефона в МИС через SOAP:", formattedPhone, "Исходный номер:", phoneNumber);
       
-      // Ищем пациента по номеру телефона в МИС
-      const searchResult = await hubServiceClient.searchTop10Patient({
-        cellPhone: formattedPhone
-      });
+      // Ищем пациента по номеру телефона в МИС через SOAP
+      const searchResult = await soapService.searchPatientByPhone(formattedPhone);
       
-      if (!searchResult.success || !searchResult.data) {
-        console.log("Пациент не найден в МИС или ошибка поиска:", searchResult.error);
+      // Если данные не получены, возвращаем информацию об отсутствии пациента
+      if (!searchResult || !searchResult.Patient || searchResult.Patient.length === 0) {
+        console.log("Пациент не найден в МИС через SOAP");
         return NextResponse.json({
           exists: false,
           message: "Номер телефона не найден в системе клиники"
         });
       }
       
-      console.log("Результат поиска в МИС:", searchResult.data);
+      console.log("Результат поиска в МИС через SOAP:", searchResult);
       
       // Преобразуем данные из МИС в формат профилей для приложения
-      const profiles = Array.isArray(searchResult.data) 
-        ? searchResult.data.map(patient => ({
-            id: patient.IdPat || String(Math.random()), // используем IdPat или генерируем случайный ID
-            fullName: `${patient.LastName} ${patient.FirstName} ${patient.SecondName || ''}`.trim(),
-            firstName: patient.FirstName || '',
-            patronymic: patient.SecondName || '',
-            lastName: patient.LastName || '',
-            birthDate: patient.BirthDate || '',
-            age: calculateAge(patient.BirthDate),
-            phone: phoneNumber,
-          }))
-        : [];
+      const patients: SoapPatient[] = Array.isArray(searchResult.Patient) 
+        ? searchResult.Patient 
+        : [searchResult.Patient];
+      
+      const profiles = patients.map((patient: SoapPatient) => ({
+        id: patient.IdPat || String(Math.random()), // используем IdPat или генерируем случайный ID
+        fullName: `${patient.LastName || ''} ${patient.FirstName || ''} ${patient.SecondName || ''}`.trim(),
+        firstName: patient.FirstName || '',
+        patronymic: patient.SecondName || '',
+        lastName: patient.LastName || '',
+        birthDate: patient.BirthDate || '',
+        age: calculateAge(patient.BirthDate || ''),
+        phone: phoneNumber,
+      }));
       
       const hasProfiles = profiles.length > 0;
       
@@ -71,9 +82,9 @@ export async function POST(request: Request) {
         profiles
       });
     } catch (error) {
-      console.error("Ошибка при проверке номера телефона в МИС:", error);
+      console.error("Ошибка при проверке номера телефона в МИС через SOAP:", error);
       return NextResponse.json({ 
-        error: "Failed to check phone number in MIS",
+        error: "Failed to check phone number in MIS via SOAP",
         details: String(error)
       }, { status: 500 });
     }

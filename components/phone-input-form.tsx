@@ -10,10 +10,16 @@ interface PhoneInputFormProps {
 export function PhoneInputForm({ onSubmit, isLoading }: PhoneInputFormProps) {
   const [phone, setPhone] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [submitAttempts, setSubmitAttempts] = useState(0)
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Просто устанавливаем значение как оно есть, без обработки
     setPhone(e.target.value)
+    
+    // При изменении поля сбрасываем ошибку
+    if (error) {
+      setError(null)
+    }
   }
 
   const handleSubmit = (e: FormEvent) => {
@@ -44,8 +50,26 @@ export function PhoneInputForm({ onSubmit, isLoading }: PhoneInputFormProps) {
       phoneToSubmit = "+7" + phone
     }
     
-    setError(null)
-    onSubmit(phoneToSubmit)
+    try {
+      // Увеличиваем счетчик попыток отправки
+      setSubmitAttempts(prev => prev + 1)
+      
+      // Логируем отправку для отладки
+      console.log(`Отправка номера телефона (попытка ${submitAttempts + 1}):`, phoneToSubmit)
+      
+      setError(null)
+      onSubmit(phoneToSubmit)
+    } catch (err) {
+      console.error("Ошибка при отправке номера:", err)
+      setError("Произошла ошибка при отправке. Пожалуйста, попробуйте ещё раз.")
+    }
+  }
+
+  // Обработчик для повторной отправки с задержкой при ошибках соединения
+  const handleRetry = () => {
+    if (submitAttempts > 0) {
+      handleSubmit({ preventDefault: () => {} } as FormEvent)
+    }
   }
 
   return (
@@ -65,7 +89,18 @@ export function PhoneInputForm({ onSubmit, isLoading }: PhoneInputFormProps) {
         </p>
         
         {error && (
-          <p className="text-brand-error text-[14px]">{error}</p>
+          <div className="flex flex-col space-y-2">
+            <p className="text-brand-error text-[14px]">{error}</p>
+            {error.includes("Произошла ошибка при отправке") && (
+              <button 
+                type="button"
+                onClick={handleRetry}
+                className="text-brand text-[14px] underline"
+              >
+                Попробовать снова
+              </button>
+            )}
+          </div>
         )}
         
         <button

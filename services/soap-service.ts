@@ -154,6 +154,55 @@ export class SoapService {
       throw error;
     }
   }
+  
+  /**
+   * Поиск пациента по номеру телефона
+   * @param phoneNumber Номер телефона (без +7)
+   * @param lpuId ID ЛПУ (по умолчанию из конфигурации)
+   * @returns Результат поиска пациента
+   */
+  public async searchPatientByPhone(phoneNumber: string, lpuId: string = this.defaultLpuId): Promise<any> {
+    try {
+      console.log(`Поиск пациента по номеру телефона через SOAP: ${phoneNumber}`);
+      
+      if (this.useProxy) {
+        // Используем прокси-сервер
+        return await this.callProxyMethod('SearchTop10Patient', {
+          idLpu: lpuId,
+          guid: this.guid,
+          idHistory: Date.now().toString(),
+          patient: {
+            CellPhone: phoneNumber
+          }
+        });
+      } else {
+        // Прямое подключение к МИС через SOAP
+        const client = await this.createClient();
+        const args = {
+          idLpu: lpuId,
+          guid: this.guid,
+          idHistory: Date.now().toString(),
+          patient: {
+            CellPhone: phoneNumber
+          }
+        };
+        
+        return new Promise((resolve, reject) => {
+          client.SearchTop10Patient(args, (err: any, result: any) => {
+            if (err) {
+              console.error('Ошибка запроса SOAP SearchTop10Patient:', err);
+              reject(err);
+              return;
+            }
+            resolve(result);
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка при поиске пациента по номеру телефона через SOAP:', error);
+      throw error;
+    }
+  }
 
   /**
    * Вызывает метод через прокси-сервер
