@@ -8,13 +8,7 @@ import { AppointmentProvider } from "@/context/appointment-context"
 import { Toaster } from "sonner"
 import Script from "next/script"
 import TypographyProvider from "@/lib/typography-provider"
-import dynamic from "next/dynamic"
-
-// Динамически импортируем компонент для инициализации Telegram, чтобы он загружался только на клиенте
-const TelegramInit = dynamic(
-  () => import("./_components/telegram-init"),
-  { ssr: false }
-)
+import TelegramClientWrapper from "./_components/telegram-client-wrapper"
 
 // Правильная загрузка шрифта Montserrat через next/font/google
 const montserrat = Montserrat({
@@ -41,7 +35,7 @@ export default function RootLayout({
       </head>
       <body className={`${montserrat.variable} font-sans`}>
         {/* Инициализация Telegram WebApp и перехват ошибок */}
-        <TelegramInit />
+        <TelegramClientWrapper />
         <UserProvider>
           <AppointmentProvider>
             <TypographyProvider>

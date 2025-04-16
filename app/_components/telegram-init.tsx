@@ -5,7 +5,7 @@ import { useEffect } from "react";
 /**
  * Компонент для инициализации Telegram WebApp и перехвата ошибок
  */
-export function TelegramInit() {
+export default function TelegramInit() {
   useEffect(() => {
     // Проверяем, запущено ли приложение в Telegram WebApp
     const isTelegramWebApp = window && 
@@ -68,6 +68,4 @@ export function TelegramInit() {
   
   // Компонент не рендерит ничего в DOM
   return null;
-}
-
-export default TelegramInit; 
+} 
