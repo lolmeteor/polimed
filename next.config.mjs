@@ -32,6 +32,10 @@ const nextConfig = {
     TOKEN_URL: process.env.TOKEN_URL,
     DEFAULT_LPU_ID: process.env.DEFAULT_LPU_ID,
     
+    // Прокси для МИС
+    PROXY_URL: process.env.PROXY_URL,
+    USE_PROXY: process.env.USE_PROXY,
+    
     // Отладка
     DEBUG_SECRET_KEY: process.env.DEBUG_SECRET_KEY,
     
@@ -49,6 +53,10 @@ const nextConfig = {
     WSDL_URL: process.env.WSDL_URL,
     TOKEN_URL: process.env.TOKEN_URL,
     DEFAULT_LPU_ID: process.env.DEFAULT_LPU_ID,
+    
+    // Прокси для МИС
+    PROXY_URL: process.env.PROXY_URL,
+    USE_PROXY: process.env.USE_PROXY,
     
     // Отладка
     DEBUG_SECRET_KEY: process.env.DEBUG_SECRET_KEY,

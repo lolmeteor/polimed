@@ -1,4 +1,5 @@
 import { hubServiceConfig } from './api-config';
+import axios from 'axios';
 
 /**
  * Интерфейс для ответа от HubService
@@ -93,14 +94,18 @@ interface SearchTop10PatientRequest extends BaseHubServiceRequest {
  */
 export class HubServiceClient {
   private baseUrl: string;
+  private proxyUrl: string;
   private guid: string;
   private defaultLpuId: string;
   private idHistory: number;
+  private useProxy: boolean;
 
   constructor() {
     this.baseUrl = hubServiceConfig.wsdlUrl.replace('?singleWsdl', '');
+    this.proxyUrl = hubServiceConfig.proxyUrl;
     this.guid = hubServiceConfig.guid;
     this.defaultLpuId = hubServiceConfig.defaultLpuId;
+    this.useProxy = hubServiceConfig.useProxy;
     this.idHistory = Math.floor(Math.random() * 100000); // Генерируем случайный idHistory
   }
 
@@ -112,29 +117,52 @@ export class HubServiceClient {
    */
   private async makeRequest<T, R>(endpoint: string, data: T): Promise<HubServiceResponse<R>> {
     try {
-      const url = `${this.baseUrl}Json.svc/${endpoint}`;
-      
-      console.log(`HubService: Выполняем запрос к ${endpoint}`, { url, data });
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      if (this.useProxy) {
+        // Используем прокси-сервер
+        console.log(`HubService: Выполняем запрос через прокси к ${endpoint}`, data);
+        
+        const response = await axios.post(`${this.proxyUrl}/${endpoint}`, data, {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        if (response.status !== 200) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        console.log(`HubService: Получен ответ от прокси для ${endpoint}`, response.data);
+        
+        return {
+          success: true,
+          data: response.data
+        };
+      } else {
+        // Прямое подключение к МИС
+        const url = `${this.baseUrl}Json.svc/${endpoint}`;
+        
+        console.log(`HubService: Выполняем прямой запрос к ${endpoint}`, { url, data });
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log(`HubService: Получен ответ от ${endpoint}`, result);
+        
+        return {
+          success: true,
+          data: result
+        };
       }
-
-      const result = await response.json();
-      console.log(`HubService: Получен ответ от ${endpoint}`, result);
-      
-      return {
-        success: true,
-        data: result
-      };
     } catch (error) {
       console.error(`HubService: Ошибка при запросе к ${endpoint}`, error);
       return {
@@ -261,12 +289,12 @@ export class HubServiceClient {
       endVisit: `/Date(${endTimestamp}+0300)/`
     };
     
-    return this.makeRequest<GetAvailableAppointmentsRequest, any>('GetAvaibleAppointments', request);
+    return this.makeRequest<GetAvailableAppointmentsRequest, any>('GetAvailableAppointments', request);
   }
 
   /**
-   * Выполняет запись на приём
-   * @param idAppointment - идентификатор слота для записи
+   * Выполняет запись пациента к врачу
+   * @param idAppointment - идентификатор слота записи
    * @param idPat - идентификатор пациента
    * @param idLpu - идентификатор ЛПУ (по умолчанию из конфигурации)
    * @returns результат записи
@@ -288,10 +316,10 @@ export class HubServiceClient {
   }
 
   /**
-   * Поиск пациентов по параметрам
+   * Поиск пациентов по различным параметрам
    * @param searchParams - параметры поиска
    * @param idLpu - идентификатор ЛПУ (по умолчанию из конфигурации)
-   * @returns найденные пациенты
+   * @returns список найденных пациентов
    */
   public async searchTop10Patient(
     searchParams: {
@@ -304,20 +332,18 @@ export class HubServiceClient {
     },
     idLpu: string = this.defaultLpuId
   ): Promise<HubServiceResponse<any>> {
-    const patient: any = {};
-    
-    if (searchParams.cellPhone) patient.CellPhone = searchParams.cellPhone;
-    if (searchParams.birthYear) patient.BirthYear = searchParams.birthYear;
-    if (searchParams.firstName) patient.FirstName = searchParams.firstName;
-    if (searchParams.lastName) patient.LastName = searchParams.lastName;
-    if (searchParams.secondName) patient.SecondName = searchParams.secondName;
-    if (searchParams.policyNumber) patient.PolicyNumber = searchParams.policyNumber;
-    
     const request: SearchTop10PatientRequest = {
       guid: this.guid,
       idHistory: this.idHistory,
       idLpu,
-      patient
+      patient: {
+        CellPhone: searchParams.cellPhone,
+        BirthYear: searchParams.birthYear,
+        FirstName: searchParams.firstName,
+        LastName: searchParams.lastName,
+        SecondName: searchParams.secondName,
+        PolicyNumber: searchParams.policyNumber
+      }
     };
     
     return this.makeRequest<SearchTop10PatientRequest, any>('SearchTop10Patient', request);
