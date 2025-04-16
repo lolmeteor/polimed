@@ -17,7 +17,7 @@ const REMOTE_HOST = 'gw.chel.mnogomed.ru';
 const REMOTE_PORT = 9095;
 const LOCAL_PORT = 9095;
 
-// Содержимое SSH ключа из файла cursorinfo/id_rsa.txt
+// Содержимое SSH ключа из файла cursorinfo/id_rsa
 const SSH_KEY = `-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
 NhAAAAAwEAAQAAAQEAvKREDztIiIambId5fWIkovuGyEehBrTvDs/QYNqpjwvZMNoo5jKA
