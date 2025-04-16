@@ -13,23 +13,21 @@ export function PhoneInputForm({ onSubmit, isLoading }: PhoneInputFormProps) {
   const [error, setError] = useState<string | null>(null)
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    // Если пользователь удаляет символы - даем это сделать
-    if (value.length < phone.length) {
-      setPhone(value)
-      return
-    }
-
-    // Считаем только цифры
-    const digits = value.replace(/\D/g, "")
+    // Получаем только цифры из введенного значения
+    const inputValue = e.target.value
+    const digits = inputValue.replace(/\D/g, "")
     
+    // Если ввод пустой, очищаем поле
     if (digits.length === 0) {
       setPhone("")
       return
     }
     
-    // Форматируем номер телефона для отображения
-    const formattedPhone = formatPhoneNumber(digits)
+    // Ограничиваем до 11 цифр максимум
+    const limitedDigits = digits.slice(0, 11)
+    
+    // Форматируем номер для отображения
+    const formattedPhone = formatPhoneNumber(limitedDigits)
     setPhone(formattedPhone)
   }
 
