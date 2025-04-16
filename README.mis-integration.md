@@ -74,6 +74,42 @@ MIS_DEFAULT_LPU_ID=ид-лпу-по-умолчанию
 ```
 MIS_WSDL_URL=http://адрес-сервера-продакшн/Service/HubService.svc?wsdl
 MIS_TOKEN_URL=http://адрес-сервера-продакшн/api/token
-MIS_GUID=реальный-guid-для-продакшн
+MIS_GUID=5aa5aa80-24ed-44b0-8f64-3e71253069b1
 MIS_DEFAULT_LPU_ID=реальный-id-лпу-для-продакшн
-``` 
+```
+
+## Настройка SSH-туннеля для доступа к МИС
+
+Для доступа к МИС-серверу необходимо настроить SSH-туннель через виртуальную машину:
+
+1. Используйте SSH-ключи из директории `cursorinfo` для подключения:
+   ```
+   ssh -i path/to/id_rsa ubuntu@51.250.34.77
+   ```
+
+2. Создайте SSH-туннель для перенаправления запросов:
+   ```
+   ssh -L 9095:gw.chel.mnogomed.ru:9095 ubuntu@51.250.34.77
+   ```
+
+3. После создания туннеля, API будет доступно локально по адресу:
+   ```
+   http://localhost:9095/HubService.svc?singleWsdl
+   ```
+
+4. Для тестирования API можно использовать скрипты из папки `mis-api-test`:
+   ```
+   cd mis-api-test
+   node simple-api-test.js
+   ```
+
+### Рабочие URL для МИС API
+
+- Основной URL: `http://gw.chel.mnogomed.ru:9095/HubService.svc`
+- WSDL URL: `http://gw.chel.mnogomed.ru:9095/HubService.svc?singleWsdl`
+
+### Важно!
+
+Прямой доступ к следующим URL не работает без SSH-туннеля:
+- http://10.74.20.4:9095/HubService.svc
+- http://10.74.20.4:9095/HubService.svc?singleWsdl 

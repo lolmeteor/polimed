@@ -22,19 +22,7 @@ const nextConfig = {
     parallelServerCompiles: true,
   },
   env: {
-    // Публичные переменные для клиентских компонентов
-    NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
-    NEXT_PUBLIC_MIS_WSDL_URL: process.env.NEXT_PUBLIC_MIS_WSDL_URL || process.env.MIS_WSDL_URL,
-    NEXT_PUBLIC_MIS_TOKEN_URL: process.env.NEXT_PUBLIC_MIS_TOKEN_URL || process.env.MIS_TOKEN_URL,
-    NEXT_PUBLIC_MIS_GUID: process.env.NEXT_PUBLIC_MIS_GUID || process.env.MIS_GUID,
-    NEXT_PUBLIC_MIS_DEFAULT_LPU_ID: process.env.NEXT_PUBLIC_MIS_DEFAULT_LPU_ID || process.env.MIS_DEFAULT_LPU_ID,
-    
-    // Переменные для серверной части
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-    MIS_WSDL_URL: process.env.MIS_WSDL_URL,
-    MIS_TOKEN_URL: process.env.MIS_TOKEN_URL,
-    MIS_GUID: process.env.MIS_GUID,
-    MIS_DEFAULT_LPU_ID: process.env.MIS_DEFAULT_LPU_ID,
   },
   serverRuntimeConfig: {
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
