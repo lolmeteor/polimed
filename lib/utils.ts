@@ -20,26 +20,13 @@ export function formatPhoneNumber(digits: string): string {
   // Очищаем от всех нецифровых символов
   const cleanDigits = digits.replace(/\D/g, "");
   
-  // Обрабатываем номер в зависимости от длины
-  let localDigits = cleanDigits;
-  
-  // Если 11 цифр и начинается с 7 или 8, убираем первую цифру
-  if (localDigits.length === 11 && (localDigits[0] === "7" || localDigits[0] === "8")) {
-    localDigits = localDigits.substring(1);
-  }
-  
-  // Если больше 10 цифр, обрезаем до 10
-  if (localDigits.length > 10) {
-    localDigits = localDigits.slice(0, 10);
-  }
-  
   // Форматируем номер
   let formattedNumber = "+7";
   
   // Добавляем код города в скобках (XXX)
-  if (localDigits.length > 0) {
+  if (cleanDigits.length > 0) {
     // Берем до 3 цифр или сколько есть
-    const areaCode = localDigits.slice(0, Math.min(3, localDigits.length));
+    const areaCode = cleanDigits.slice(0, Math.min(3, cleanDigits.length));
     formattedNumber += ` (${areaCode}`;
     
     // Если меньше 3 цифр, дополняем подчеркиваниями
@@ -53,8 +40,8 @@ export function formatPhoneNumber(digits: string): string {
   }
   
   // Добавляем первую часть номера XXX
-  if (localDigits.length > 3) {
-    const firstPart = localDigits.slice(3, Math.min(6, localDigits.length));
+  if (cleanDigits.length > 3) {
+    const firstPart = cleanDigits.slice(3, Math.min(6, cleanDigits.length));
     formattedNumber += ` ${firstPart}`;
     
     // Если меньше 3 цифр, дополняем подчеркиваниями
@@ -66,8 +53,8 @@ export function formatPhoneNumber(digits: string): string {
   }
   
   // Добавляем вторую часть номера XX
-  if (localDigits.length > 6) {
-    const secondPart = localDigits.slice(6, Math.min(8, localDigits.length));
+  if (cleanDigits.length > 6) {
+    const secondPart = cleanDigits.slice(6, Math.min(8, cleanDigits.length));
     formattedNumber += `-${secondPart}`;
     
     // Если меньше 2 цифр, дополняем подчеркиваниями
@@ -79,8 +66,8 @@ export function formatPhoneNumber(digits: string): string {
   }
   
   // Добавляем третью часть номера XX
-  if (localDigits.length > 8) {
-    const thirdPart = localDigits.slice(8, Math.min(10, localDigits.length));
+  if (cleanDigits.length > 8) {
+    const thirdPart = cleanDigits.slice(8, Math.min(10, cleanDigits.length));
     formattedNumber += `-${thirdPart}`;
     
     // Если меньше 2 цифр, дополняем подчеркиваниями

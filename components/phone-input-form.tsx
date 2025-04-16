@@ -13,22 +13,39 @@ export function PhoneInputForm({ onSubmit, isLoading }: PhoneInputFormProps) {
   const [error, setError] = useState<string | null>(null)
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Получаем только цифры из введенного значения
     const inputValue = e.target.value
-    const digits = inputValue.replace(/\D/g, "")
     
-    // Если ввод пустой, очищаем поле
-    if (digits.length === 0) {
-      setPhone("")
-      return
+    // Если пользователь вводит новую цифру в конец
+    if (inputValue.length > phone.length) {
+      // Получаем только цифры из введенного значения
+      const allDigits = inputValue.replace(/\D/g, "")
+      
+      // Форматируем номер для отображения
+      const formattedPhone = formatPhoneNumber(allDigits)
+      setPhone(formattedPhone)
+    } 
+    // Если пользователь удаляет символы
+    else if (inputValue.length < phone.length) {
+      // Получаем цифры из текущего значения
+      const currentDigits = phone.replace(/\D/g, "")
+      
+      // Если пользователь удалил последнюю цифру
+      if (currentDigits.length > 0) {
+        const newDigits = currentDigits.slice(0, -1)
+        
+        if (newDigits.length === 0) {
+          setPhone("")
+        } else {
+          setPhone(formatPhoneNumber(newDigits))
+        }
+      } else {
+        setPhone("")
+      }
     }
-    
-    // Ограничиваем до 11 цифр максимум
-    const limitedDigits = digits.slice(0, 11)
-    
-    // Форматируем номер для отображения
-    const formattedPhone = formatPhoneNumber(limitedDigits)
-    setPhone(formattedPhone)
+    // Если пользователь стер всё
+    else if (inputValue === "") {
+      setPhone("")
+    }
   }
 
   const handleSubmit = (e: FormEvent) => {
@@ -37,32 +54,14 @@ export function PhoneInputForm({ onSubmit, isLoading }: PhoneInputFormProps) {
     // Удаляем все нецифровые символы для проверки
     const digits = phone.replace(/\D/g, "")
     
-    // Проверяем количество цифр (10 или 11)
+    // Проверяем количество цифр (минимум 10)
     if (digits.length < 10) {
       setError("Пожалуйста, введите корректный номер телефона")
       return
     }
     
     // Подготавливаем номер для отправки (с префиксом +7)
-    let phoneToSubmit = ""
-    
-    if (digits.length === 10) {
-      // Если 10 цифр, добавляем +7
-      phoneToSubmit = `+7${digits}`
-    } else if (digits.length === 11) {
-      // Если 11 цифр, проверяем первую цифру
-      const firstDigit = digits.charAt(0)
-      if (firstDigit === "7" || firstDigit === "8") {
-        // Если начинается с 7 или 8, заменяем на +7
-        phoneToSubmit = `+7${digits.substring(1)}`
-      } else {
-        setError("Номер телефона должен начинаться с 7 или 8")
-        return
-      }
-    } else {
-      setError("Пожалуйста, введите корректный номер телефона")
-      return
-    }
+    let phoneToSubmit = `+7${digits.slice(-10)}` // Берем последние 10 цифр
     
     setError(null)
     onSubmit(phoneToSubmit)
