@@ -1,4 +1,5 @@
 import { hubServiceConfig } from './api-config';
+import axios from 'axios';
 
 /**
  * Интерфейс ответа с токеном
@@ -13,13 +14,17 @@ interface TokenResponse {
  */
 export class TokenService {
   private tokenUrl: string;
+  private proxyUrl: string;
   private guid: string;
   private token: string | null = null;
   private expiresAt: Date | null = null;
+  private useProxy: boolean;
 
   constructor() {
     this.tokenUrl = hubServiceConfig.tokenUrl;
+    this.proxyUrl = hubServiceConfig.proxyUrl;
     this.guid = hubServiceConfig.guid;
+    this.useProxy = hubServiceConfig.useProxy;
   }
 
   /**
@@ -39,19 +44,39 @@ export class TokenService {
     try {
       console.log('Получаю новый токен через API...');
       
-      const response = await fetch(this.tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ guid: this.guid })
-      });
+      let data;
       
-      if (!response.ok) {
-        throw new Error(`Ошибка получения токена: ${response.status}`);
-      }
+      if (this.useProxy) {
+        // Получение токена через прокси-сервер
+        const response = await axios.post(`${this.proxyUrl}/token`, { 
+          guid: this.guid 
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.status !== 200) {
+          throw new Error(`Ошибка получения токена: ${response.status}`);
+        }
+        
+        data = response.data;
+      } else {
+        // Прямой запрос к API
+        const response = await fetch(this.tokenUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ guid: this.guid })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Ошибка получения токена: ${response.status}`);
+        }
 
-      const data = await response.json();
+        data = await response.json();
+      }
       
       // Если в ответе есть токен
       if (data.token) {

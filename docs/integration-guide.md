@@ -2,62 +2,82 @@
 
 В данной документации описаны способы интеграции с внешними сервисами, используемыми в приложении "Полимедика". Реализованы три основных метода интеграции согласно инструкции.
 
-## 1. SOAP подключение к МИС
+## 1. SOAP подключение к МИС через прокси-сервер
 
-Для взаимодействия с сервером через SOAP используется библиотека `soap` для Node.js.
+Для взаимодействия с МИС используется подключение через прокси-сервер, который перенаправляет запросы в МИС.
 
 ### Установка и настройка
 
-Добавлена библиотека для работы с SOAP-сервисами:
+Добавлены необходимые библиотеки:
 
 ```bash
-npm install soap
+npm install soap axios
 ```
 
 ### Реализация сервиса
 
-Создан сервис `soap-service.ts`, который предоставляет удобный интерфейс для взаимодействия с SOAP API МИС:
+Создан сервис `soap-service.ts`, который предоставляет интерфейс для взаимодействия с SOAP API МИС через прокси-сервер:
 
 ```typescript
 import * as soap from 'soap';
 import { hubServiceConfig } from './api-config';
+import axios from 'axios';
 
 export class SoapService {
   private wsdlUrl: string;
+  private proxyUrl: string;
   private guid: string;
+  private useProxy: boolean;
   
   constructor() {
     this.wsdlUrl = hubServiceConfig.wsdlUrl;
+    this.proxyUrl = hubServiceConfig.proxyUrl;
     this.guid = hubServiceConfig.guid;
+    this.useProxy = hubServiceConfig.useProxy;
   }
   
-  private async createClient(): Promise<any> {
-    return new Promise((resolve, reject) => {
-      soap.createClient(this.wsdlUrl, (err, client) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(client);
-      });
-    });
-  }
-  
-  // Пример метода для получения списка районов
+  // Метод для получения списка районов
   public async getDistrictList(lpuId: string = "1570"): Promise<any> {
-    const client = await this.createClient();
-    return new Promise((resolve, reject) => {
-      client.GetDistrictList({ GUID: this.guid, LPU_ID: lpuId }, (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
-    });
+    try {
+      if (this.useProxy) {
+        // Используем прокси-сервер
+        return await this.callProxyMethod('GetDistrictList', {
+          GUID: this.guid,
+          LPU_ID: lpuId
+        });
+      } else {
+        // Запасной вариант - прямое подключение
+        // ...
+      }
+    } catch (error) {
+      console.error('Ошибка при выполнении GetDistrictList:', error);
+      throw error;
+    }
   }
   
   // Другие методы для работы с SOAP API...
+  
+  // Метод для вызова API через прокси
+  private async callProxyMethod(method: string, params: any): Promise<any> {
+    try {
+      console.log(`Вызов метода ${method} через прокси-сервер: ${this.proxyUrl}/${method}`);
+      
+      const response = await axios.post(`${this.proxyUrl}/${method}`, params, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.status !== 200) {
+        throw new Error(`Ошибка запроса: ${response.status} ${response.statusText}`);
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error(`Ошибка при вызове метода ${method} через прокси:`, error);
+      throw error;
+    }
+  }
 }
 ```
 
@@ -76,18 +96,19 @@ async function getDistrictsExample() {
 }
 ```
 
-## 2. API для получения токена
+## 2. API для получения токена через прокси
 
-Для получения токена и авторизации запросов реализован сервис `token-service.ts`.
+Для получения токена используется тот же прокси-сервер.
 
 ### Установка и настройка
 
-Для работы с HTTP запросами используется встроенный fetch API.
+Для работы с HTTP запросами используется библиотека axios.
 
 ### Реализация сервиса
 
 ```typescript
 import { hubServiceConfig } from './api-config';
+import axios from 'axios';
 
 interface TokenResponse {
   token: string;
@@ -96,13 +117,17 @@ interface TokenResponse {
 
 export class TokenService {
   private tokenUrl: string;
+  private proxyUrl: string;
   private guid: string;
   private token: string | null = null;
   private expiresAt: Date | null = null;
+  private useProxy: boolean;
   
   constructor() {
     this.tokenUrl = hubServiceConfig.tokenUrl;
+    this.proxyUrl = hubServiceConfig.proxyUrl;
     this.guid = hubServiceConfig.guid;
+    this.useProxy = hubServiceConfig.useProxy;
   }
   
   public async getToken(forceRefresh: boolean = false): Promise<TokenResponse> {
@@ -114,36 +139,47 @@ export class TokenService {
       };
     }
     
-    // Запрашиваем новый токен
-    const response = await fetch(this.tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ guid: this.guid })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Ошибка получения токена: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (data.token) {
-      this.token = data.token;
-      const expiresIn = data.expiresIn || 3600; // По умолчанию 1 час
-      this.expiresAt = new Date(Date.now() + expiresIn * 1000);
+    try {
+      let data;
       
-      return {
-        token: this.token,
-        expiresAt: this.expiresAt
-      };
-    } else {
-      throw new Error('Токен не найден в ответе');
+      if (this.useProxy) {
+        // Получение токена через прокси-сервер
+        const response = await axios.post(`${this.proxyUrl}/token`, { 
+          guid: this.guid 
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.status !== 200) {
+          throw new Error(`Ошибка получения токена: ${response.status}`);
+        }
+        
+        data = response.data;
+      } else {
+        // Запасной вариант - прямой запрос к API
+        // ...
+      }
+      
+      // Сохраняем полученный токен
+      if (data.token) {
+        this.token = data.token;
+        const expiresIn = data.expiresIn || 3600; // По умолчанию 1 час
+        this.expiresAt = new Date(Date.now() + expiresIn * 1000);
+        
+        return {
+          token: this.token,
+          expiresAt: this.expiresAt
+        };
+      } else {
+        throw new Error('Токен не найден в ответе');
+      }
+    } catch (error) {
+      console.error('Ошибка получения токена:', error);
+      throw error;
     }
   }
-  
-  // Другие методы для работы с токенами...
 }
 ```
 
@@ -289,33 +325,53 @@ async function sshExample() {
 node scripts/test-services.js
 ```
 
+Скрипт выполняет следующие проверки:
+1. Доступность прокси-сервера
+2. Подключение к SOAP API через прокси
+3. Получение токена через прокси
+4. SSH-подключение к серверу
+
 ## Возможные проблемы и решения
 
-1. **SOAP API недоступен**
-   - Проверьте доступность сервера
-   - Убедитесь, что используется корректный URL
-   - Возможно, требуется VPN для доступа
+1. **Прокси-сервер недоступен**
+   - Проверьте сетевое подключение к серверу 51.250.34.77:3001
+   - Убедитесь, что прокси-сервер запущен и работает корректно
+   - Проверьте настройки файрвола
 
-2. **Ошибка получения токена**
-   - Проверьте правильность GUID
-   - Убедитесь, что сервер доступен
+2. **Ошибки в ответах от прокси**
+   - Проверьте правильность формата запроса
+   - Убедитесь, что прокси-сервер корректно настроен для работы с МИС
+   - Проверьте лог-файлы на сервере прокси
 
 3. **Проблемы с SSH подключением**
    - Проверьте правильность SSH-ключа
    - Убедитесь, что сервер доступен и принимает SSH-соединения
    - Проверьте, что ключ добавлен в authorized_keys на сервере
 
+## Схема взаимодействия
+
+```
+Клиент <-> Прокси-сервер (51.250.34.77:3001) <-> МИС (gw.chel.mnogomed.ru:9095)
+```
+
+Все запросы к МИС проходят через прокси-сервер, который обрабатывает запросы, перенаправляет их в МИС и возвращает результаты клиенту.
+
 ## Конфигурация
 
 Все параметры подключения хранятся в файле `services/api-config.ts`:
 
 ```typescript
-// HubService API конфигурация
+// HubService API конфигурация через прокси
 export const hubServiceConfig = {
   guid: process.env.GUID || '5aa5aa80-24ed-44b0-8f64-3e71253069b1',
+  // Прокси-сервер для подключения к МИС
+  proxyUrl: process.env.PROXY_URL || 'http://51.250.34.77:3001/proxy',
+  // Оригинальные URL для совместимости
   wsdlUrl: process.env.WSDL_URL || 'http://gw.chel.mnogomed.ru:9095/HubService.svc?singleWsdl',
   tokenUrl: process.env.TOKEN_URL || 'http://gw.chel.mnogomed.ru:9095/api/token',
   defaultLpuId: process.env.DEFAULT_LPU_ID || '1570',
+  // Используем прокси вместо прямого подключения
+  useProxy: process.env.USE_PROXY !== 'false',
 };
 
 // Конфигурация для SSH доступа
