@@ -68,40 +68,59 @@ export default function Auth() {
 
   // Функция для форматирования номера телефона
   const formatPhoneNumber = (value: string) => {
-    // Удаляем все нецифровые символы
-    const cleaned = value.replace(/\D/g, "");
+    // Удаляем все нецифровые символы, кроме +
+    const cleaned = value.replace(/[^\d+]/g, "");
     
-    // Применяем маску +7 (XXX) XXX-XX-XX
-    let formatted = "";
-    if (cleaned.length > 0) {
-      formatted += "+7 ";
-      if (cleaned.length > 0) {
-        formatted += `(${cleaned.substring(0, 3)}`;
-      }
-      if (cleaned.length > 3) {
-        formatted += `) ${cleaned.substring(3, 6)}`;
-      }
-      if (cleaned.length > 6) {
-        formatted += `-${cleaned.substring(6, 8)}`;
-      }
-      if (cleaned.length > 8) {
-        formatted += `-${cleaned.substring(8, 10)}`;
-      }
+    // Проверяем, начинается ли номер с +
+    const hasPlus = cleaned.startsWith("+");
+    
+    // Если номер пустой, возвращаем пустую строку
+    if (cleaned.length === 0) {
+      return "";
     }
     
-    return formatted;
+    // Если номер начинается с +, форматируем его
+    if (hasPlus) {
+      // Получаем только цифры
+      const digits = cleaned.substring(1);
+      
+      // Форматируем в зависимости от количества цифр
+      if (digits.length <= 1) {
+        return `+${digits}`;
+      } else if (digits.length <= 4) {
+        return `+${digits.substring(0, 1)} (${digits.substring(1)}`;
+      } else if (digits.length <= 7) {
+        return `+${digits.substring(0, 1)} (${digits.substring(1, 4)}) ${digits.substring(4)}`;
+      } else if (digits.length <= 9) {
+        return `+${digits.substring(0, 1)} (${digits.substring(1, 4)}) ${digits.substring(4, 7)}-${digits.substring(7)}`;
+      } else {
+        return `+${digits.substring(0, 1)} (${digits.substring(1, 4)}) ${digits.substring(4, 7)}-${digits.substring(7, 9)}-${digits.substring(9, 11)}`;
+      }
+    } 
+    // Если нет +, то добавляем его и форматируем
+    else {
+      // Если первая цифра введена, добавляем +
+      if (cleaned.length >= 1) {
+        return formatPhoneNumber("+" + cleaned);
+      }
+      return cleaned;
+    }
   };
 
   // Обработчик изменения номера телефона
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const formatted = formatPhoneNumber(value);
-    setPhoneNumber(formatted);
+    // Не допускаем более 12 символов (+7 и 10 цифр)
+    if (value.replace(/\D/g, "").length <= 11) {
+      const formatted = formatPhoneNumber(value);
+      setPhoneNumber(formatted);
+    }
   };
 
-  // Проверка номера на валидность (должен быть в формате +7 (XXX) XXX-XX-XX)
+  // Проверка номера на валидность
   const isValidPhone = () => {
-    const phonePattern = /^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$/;
+    // Форматы для России +7 (XXX) XXX-XX-XX или для других стран
+    const phonePattern = /^\+\d \(\d{3}\) \d{3}-\d{2}-\d{2}$/;
     return phonePattern.test(phoneNumber);
   };
 
@@ -218,7 +237,7 @@ export default function Auth() {
                   type="text"
                   value={phoneNumber}
                   onChange={handlePhoneChange}
-                  placeholder="+7 (___) ___-__-__"
+                  placeholder="+_ (___) ___-__-__"
                   className="w-full sm:w-[300px] px-4 py-3 border-2 border-brand rounded-crd focus:outline-none focus:ring-2 focus:ring-brand"
                   disabled={isLoading || isChecking}
                   required

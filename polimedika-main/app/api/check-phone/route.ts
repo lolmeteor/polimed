@@ -29,8 +29,15 @@ export async function POST(request: Request) {
     }
 
     try {
-      // Форматируем номер телефона, убираем +7, оставляем только цифры
-      const phoneFormatted = phoneNumber.replace(/\+7/, '').replace(/\D/g, '');
+      // Форматируем номер телефона: убираем все нецифровые символы, оставляя только цифры
+      // Если номер начинается с +7, то убираем +7, для других стран сохраняем формат
+      let phoneFormatted = phoneNumber.replace(/\D/g, '');
+      
+      // Если номер начинается с 7 и имеет 11 цифр, считаем что это российский номер
+      if (phoneFormatted.length === 11 && phoneFormatted.startsWith('7')) {
+        // Убираем первую 7
+        phoneFormatted = phoneFormatted.substring(1);
+      }
       
       // Подготавливаем данные для запроса к прокси
       const requestData = {
