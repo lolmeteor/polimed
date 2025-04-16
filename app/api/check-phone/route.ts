@@ -14,10 +14,19 @@ export async function POST(request: Request) {
     }
 
     try {
-      // Форматируем номер телефона (убираем +7 в начале, если есть)
-      const formattedPhone = phoneNumber.replace(/^\+7/, '');
+      // Форматируем номер телефона для поиска в МИС:
+      // 1. Убираем все нецифровые символы
+      // 2. Убираем префикс +7 или 8 (если есть)
+      const digits = phoneNumber.replace(/\D/g, '');
+      let formattedPhone = digits;
       
-      console.log("Проверяем номер телефона в МИС:", formattedPhone);
+      if (digits.startsWith('7') || digits.startsWith('8')) {
+        formattedPhone = digits.substring(1);
+      } else if (phoneNumber.startsWith('+7')) {
+        formattedPhone = digits; // В случае, если оттуда уже убран префикс +7 при удалении нецифровых символов
+      }
+      
+      console.log("Проверяем номер телефона в МИС:", formattedPhone, "Исходный номер:", phoneNumber);
       
       // Ищем пациента по номеру телефона в МИС
       const searchResult = await hubServiceClient.searchTop10Patient({
@@ -28,7 +37,7 @@ export async function POST(request: Request) {
         console.log("Пациент не найден в МИС или ошибка поиска:", searchResult.error);
         return NextResponse.json({
           exists: false,
-          message: "User not found in MIS"
+          message: "Номер телефона не найден в системе клиники"
         });
       }
       
