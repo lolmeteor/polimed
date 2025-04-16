@@ -1,0 +1,12 @@
+{
+  "name": "mis-api-test",
+  "version": "1.0.0",
+  "description": "Простой тест API МИС",
+  "main": "simple-api-test.js",
+  "scripts": {
+    "start": "node simple-api-test.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
+  }
+}

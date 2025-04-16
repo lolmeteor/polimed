@@ -7,7 +7,12 @@ config();
 
 const requiredEnvVars = [
   'TELEGRAM_BOT_TOKEN',
-  'NODE_ENV'
+  'NODE_ENV',
+  'NEXT_PUBLIC_TELEGRAM_BOT_USERNAME',
+  'MIS_WSDL_URL',
+  'MIS_TOKEN_URL',
+  'MIS_GUID',
+  'DEFAULT_LPU_ID'
 ];
 
 function checkEnvVars() {

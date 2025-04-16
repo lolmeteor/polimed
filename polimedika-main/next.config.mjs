@@ -23,9 +23,18 @@ const nextConfig = {
   },
   env: {
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME,
+    MIS_WSDL_URL: process.env.MIS_WSDL_URL,
+    MIS_TOKEN_URL: process.env.MIS_TOKEN_URL,
+    MIS_GUID: process.env.MIS_GUID,
+    DEFAULT_LPU_ID: process.env.DEFAULT_LPU_ID
   },
   serverRuntimeConfig: {
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    MIS_WSDL_URL: process.env.MIS_WSDL_URL,
+    MIS_TOKEN_URL: process.env.MIS_TOKEN_URL,
+    MIS_GUID: process.env.MIS_GUID,
+    DEFAULT_LPU_ID: process.env.DEFAULT_LPU_ID
   },
 }
 
