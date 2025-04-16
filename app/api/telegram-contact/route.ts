@@ -27,10 +27,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Contact does not belong to the user" }, { status: 400 })
     }
 
+    // Форматируем номер телефона
+    const phoneNumber = data.phoneNumber.startsWith('+') 
+      ? data.phoneNumber 
+      : `+${data.phoneNumber}`
+
     // Сохраняем данные контакта
     contactsStore[data.telegramId] = {
       telegramId: data.telegramId,
-      phoneNumber: data.phoneNumber,
+      phoneNumber: phoneNumber,
       firstName: data.firstName,
       lastName: data.lastName,
       contactUserId: data.contactUserId,
