@@ -2,9 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 import { Appointment, AppointmentSlot } from "@/types/appointment"
-// Заменяем импорт AppointmentService на ApiAdapter
-// import { AppointmentService } from "@/services/appointment-service"
-import { ApiAdapter } from "@/services/api-adapter"
+import { AppointmentService } from "@/services/appointment-service"
 
 // Определяем тип для контекста записей
 interface AppointmentContextType {
@@ -39,8 +37,7 @@ export function AppointmentProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
 
     try {
-      // Используем ApiAdapter вместо AppointmentService
-      const appointmentsData = await ApiAdapter.getAppointmentHistory(profileId)
+      const appointmentsData = await AppointmentService.getAppointmentHistory(profileId)
       setAppointments(appointmentsData)
     } catch (error) {
       console.error("Ошибка при загрузке истории записей:", error)
@@ -56,91 +53,13 @@ export function AppointmentProvider({ children }: { children: ReactNode }) {
     bookedAppointments?: Appointment[]
   ): Promise<AppointmentSlot[]> => {
     try {
-      // Используем ApiAdapter вместо AppointmentService
-      const slots = await ApiAdapter.getAvailableSlots(specialtySlug)
-      
-      // Фильтруем слоты локально (эта логика была в AppointmentService)
-      return filterAvailableSlots(slots, bookedAppointments || appointments)
+      const slots = await AppointmentService.getAvailableSlots(specialtySlug)
+      return AppointmentService.filterAvailableSlots(slots, bookedAppointments || appointments)
     } catch (error) {
       console.error("Ошибка при получении доступных слотов:", error)
       return []
     }
   }, [appointments])
-  
-  // Функция для фильтрации доступных слотов (перенесена из AppointmentService)
-  const filterAvailableSlots = (
-    slots: AppointmentSlot[], 
-    bookedAppointments: Appointment[]
-  ): AppointmentSlot[] => {
-    if (!bookedAppointments || bookedAppointments.length === 0) {
-      return slots
-    }
-    
-    return slots.filter(slot => {
-      // Проверка на точное совпадение ID
-      const idMatch = bookedAppointments.some(appointment => appointment.id === slot.id);
-      if (idMatch) return false;
-      
-      // Проверка на перекрытие по времени
-      try {
-        // Получаем дату и время слота
-        let slotDateTime: Date;
-        if (slot.datetime.includes('T')) {
-          // ISO формат
-          slotDateTime = new Date(slot.datetime);
-        } else if (slot.datetime.includes(' ')) {
-          // Формат "YYYY-MM-DD HH:MM" или "день месяц HH:MM"
-          const parts = slot.datetime.split(' ');
-          const timePart = parts[parts.length - 1];
-          let datePart: string;
-          
-          if (parts[0].includes('-')) {
-            // Если YYYY-MM-DD
-            datePart = parts[0];
-            slotDateTime = new Date(`${datePart}T${timePart}`);
-          } else {
-            // Если "день месяц"
-            const day = parts[0];
-            const month = parts[1];
-            const monthsRu: Record<string, number> = {
-              'января': 0, 'февраля': 1, 'марта': 2, 'апреля': 3, 'мая': 4, 'июня': 5,
-              'июля': 6, 'августа': 7, 'сентября': 8, 'октября': 9, 'ноября': 10, 'декабря': 11
-            };
-            const monthIndex = monthsRu[month.toLowerCase()];
-            const year = new Date().getFullYear();
-            slotDateTime = new Date(year, monthIndex, parseInt(day), 
-              parseInt(timePart.split(':')[0]), parseInt(timePart.split(':')[1]));
-          }
-        } else {
-          // Непонятный формат, пропускаем проверку
-          return true;
-        }
-        
-        // Проверяем перекрытие с существующими записями (±30 минут)
-        const timeOverlap = bookedAppointments.some(appointment => {
-          try {
-            const existingDateTime = appointment.datetime;
-            const parts = existingDateTime.split(' ');
-            if (parts.length !== 2) return false;
-            
-            const existingDateTime2 = new Date(`${parts[0]}T${parts[1]}`);
-            const timeDiff = Math.abs(existingDateTime2.getTime() - slotDateTime.getTime());
-            
-            // 30 минут в миллисекундах = 30 * 60 * 1000 = 1 800 000
-            return timeDiff < 1800000;
-          } catch (err) {
-            console.error("Ошибка при проверке перекрытия времени:", err);
-            return false;
-          }
-        });
-        
-        return !timeOverlap;
-      } catch (error) {
-        console.error("Ошибка при фильтрации слотов по времени:", error);
-        return true; // В случае ошибки не фильтруем слот
-      }
-    });
-  }
 
   // Функция для добавления новой записи
   const addAppointment = useCallback((appointment: Appointment) => {
@@ -151,8 +70,7 @@ export function AppointmentProvider({ children }: { children: ReactNode }) {
   const cancelAppointment = useCallback(async (appointmentId: string) => {
     try {
       setIsLoading(true)
-      // Используем ApiAdapter вместо AppointmentService
-      const success = await ApiAdapter.cancelAppointment(appointmentId)
+      const success = await AppointmentService.cancelAppointment(appointmentId)
       if (success) {
         setAppointments(prevAppointments => 
           prevAppointments.filter(appointment => appointment.id !== appointmentId)

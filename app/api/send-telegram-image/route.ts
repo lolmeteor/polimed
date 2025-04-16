@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getConfig from 'next/config';
+import { telegramConfig } from '@/services/api-config';
 
 // Обработчик POST-запросов для отправки изображений в Telegram
 export async function POST(req: NextRequest) {
@@ -7,7 +8,7 @@ export async function POST(req: NextRequest) {
     console.log("Начало обработки запроса на отправку изображения");
     
     // Используем разные способы получения токена для повышенной надежности
-    let TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+    let TELEGRAM_BOT_TOKEN = telegramConfig.botToken;
     
     // Если токен не найден, пробуем получить его через serverRuntimeConfig
     if (!TELEGRAM_BOT_TOKEN) {
@@ -16,9 +17,9 @@ export async function POST(req: NextRequest) {
       console.log("Попытка получить токен из serverRuntimeConfig");
     }
     
-    // Устанавливаем актуальный токен в качестве запасного варианта
+    // Хардкодим токен в качестве запасного варианта (только для тестирования, небезопасно для продакшена)
     if (!TELEGRAM_BOT_TOKEN) {
-      TELEGRAM_BOT_TOKEN = '7749348003:AAHYr26BF2lm1fU3SdXaxDEAsz2XDnfOyxI';
+      TELEGRAM_BOT_TOKEN = '7686816248:AAF8YUpX7WMskXC7GDE_4OWzPuiyb4Ifp-Y';
       console.log("Используем захардкоженный токен (только для отладки)");
     }
     

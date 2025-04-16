@@ -22,53 +22,40 @@ const nextConfig = {
     parallelServerCompiles: true,
   },
   env: {
+    // Telegram Bot
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
+    
+    // HubService API
+    GUID: process.env.GUID,
+    WSDL_URL: process.env.WSDL_URL,
+    TOKEN_URL: process.env.TOKEN_URL,
+    DEFAULT_LPU_ID: process.env.DEFAULT_LPU_ID,
+    
+    // Отладка
+    DEBUG_SECRET_KEY: process.env.DEBUG_SECRET_KEY,
+    
+    // SSH
+    SSH_HOST: process.env.SSH_HOST,
+    SSH_USER: process.env.SSH_USER,
   },
   serverRuntimeConfig: {
+    // Telegram Bot
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
-  },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        crypto: false,
-        stream: false,
-        http: false,
-        https: false,
-        zlib: false,
-        path: false,
-        os: false,
-        events: false
-      };
-      
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'node:crypto': 'crypto',
-        'node:fs': false,
-        'node:fs/promises': false,
-        'node:events': false,
-        'node:os': false,
-        'node:stream': false,
-        'node:buffer': false,
-        'node:util': false,
-        'node:path': false,
-        'node:url': false,
-        'node:http': false,
-        'node:https': false,
-        'node:zlib': false,
-        'node:querystring': false,
-        'node:string_decoder': false,
-        'node:punycode': false,
-        'node:process': false,
-        'node:timers': false,
-        'node:child_process': false
-      };
-    }
+    TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
     
-    return config;
+    // HubService API
+    GUID: process.env.GUID,
+    WSDL_URL: process.env.WSDL_URL,
+    TOKEN_URL: process.env.TOKEN_URL,
+    DEFAULT_LPU_ID: process.env.DEFAULT_LPU_ID,
+    
+    // Отладка
+    DEBUG_SECRET_KEY: process.env.DEBUG_SECRET_KEY,
+    
+    // SSH
+    SSH_HOST: process.env.SSH_HOST,
+    SSH_USER: process.env.SSH_USER,
   },
 }
 

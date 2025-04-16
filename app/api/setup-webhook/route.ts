@@ -1,5 +1,7 @@
-// Токен вашего бота из переменных окружения или актуальный токен
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "7749348003:AAHYr26BF2lm1fU3SdXaxDEAsz2XDnfOyxI"
+import { telegramConfig } from '@/services/api-config';
+
+// Токен вашего бота (в реальном приложении должен храниться в переменных окружения)
+const BOT_TOKEN = telegramConfig.botToken
 
 // Улучшаем обработку ошибок и добавляем больше логирования
 export async function GET(request: Request) {

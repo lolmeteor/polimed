@@ -10,28 +10,14 @@ import { SuccessModal } from "@/components/success-modal"
 import { ReferralCheck } from "@/components/referral-check"
 import { AppointmentTicketModal } from "@/components/appointment-ticket-modal"
 import { useUser } from "@/context/user-context"
-// Заменяем импорт AppointmentService на ApiAdapter
-// import { AppointmentService } from "@/services/appointment-service"
-import { ApiAdapter } from "@/services/api-adapter"
+import { AppointmentService } from "@/services/appointment-service"
 import { AppointmentSlot } from "@/types/appointment"
-// удаляем импорт моковых данных
-// import { directAccessProcedures } from "@/data/procedures"
+import { directAccessProcedures } from "@/data/procedures"
 import { toast } from "sonner"
 import { HeaderLogo } from "@/components/header-logo"
 import { BottomNav } from "@/components/bottom-nav"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-// Определяем список процедур, доступных без направления
-const directAccessProcedures = [
-  'blood-sampling',
-  'heart-ultrasound',
-  'abdominal-ultrasound',
-  'pelvic-ultrasound',
-  'leg-vessels-ultrasound',
-  'neck-vessels-ultrasound',
-  'external-respiration'
-]
 
 interface ProcedurePageProps {
   procedureName: string
@@ -189,11 +175,10 @@ export function ProcedurePage({ procedureName, procedureSlug }: ProcedurePagePro
     setIsLoading(true)
     
     try {
-      // Используем ApiAdapter вместо AppointmentService
-      const availableSlots = await ApiAdapter.getAvailableSlots(procedureSlug)
+      const availableSlots = await AppointmentService.getProcedureSlots(procedureSlug)
       
       // Сортируем слоты по дате и времени
-      const sortedSlots = availableSlots.sort((a: AppointmentSlot, b: AppointmentSlot) => {
+      const sortedSlots = availableSlots.sort((a, b) => {
         // Преобразуем дату-время в сопоставимый формат
         const dateA = a.datetime.split(' ')[0];
         const dateB = b.datetime.split(' ')[0];
@@ -253,8 +238,11 @@ export function ProcedurePage({ procedureName, procedureSlug }: ProcedurePagePro
         isProcedure: true
       }
       
-      // Используем ApiAdapter вместо AppointmentService
-      const newAppointment = await ApiAdapter.createAppointment(procedureData)
+      // Создаем запись через сервис
+      const newAppointment = await AppointmentService.createProcedureAppointment(procedureData)
+      
+      // Блокируем слот
+      AppointmentService.blockProcedureSlot(appointmentId)
       
       // Добавляем запись в контекст пользователя
       await addAppointment({ 

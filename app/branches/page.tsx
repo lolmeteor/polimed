@@ -4,31 +4,7 @@ import { HeaderLogo } from "@/components/header-logo"
 import { BottomNav } from "@/components/bottom-nav"
 import { AdaptiveContainer } from "@/components/adaptive-container"
 import { Phone, MapPin } from "lucide-react"
-// import { CLINIC_ADDRESSES } from "@/data/clinic-addresses"
-
-// Данные о клиниках
-const CLINIC_ADDRESSES = [
-  {
-    shortAddress: "ул. Чичерина, 36а",
-    fullAddress: "Челябинск, ул. Чичерина, 36а",
-    description: "Многопрофильный центр. Семейная поликлиника (взрослое и детское отделения)."
-  },
-  {
-    shortAddress: "ул. Героя России Яковлева А.В., 1",
-    fullAddress: "Челябинск, ул. Героя России Яковлева А.В., 1",
-    description: "Поликлиника для взрослых и детей. Клинико-диагностическая лаборатория."
-  },
-  {
-    shortAddress: "ул. Братьев Кашириных, 124",
-    fullAddress: "Челябинск, ул. Братьев Кашириных, 124",
-    description: "Многопрофильный центр. Поликлиника для взрослых и детей."
-  },
-  {
-    shortAddress: "пр-т Комсомольский, 45a",
-    fullAddress: "Челябинск, пр-т Комсомольский, 45a",
-    description: "Центр женского здоровья. Консультативно-диагностическое отделение для взрослых."
-  }
-]
+import { CLINIC_ADDRESSES } from "@/data/clinic-addresses"
 
 export default function BranchesPage() {
   // Функция для форматирования телефона в ссылку
