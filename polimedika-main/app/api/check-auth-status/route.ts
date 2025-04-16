@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server"
 import { contactsStore } from "../telegram-contact/route"
-import * as soap from 'soap'
-import { parseStringPromise } from 'xml2js'
 
-// SOAP константы
-const WSDL_URL = process.env.MIS_WSDL_URL!
-const MIS_GUID = process.env.MIS_GUID!
-const DEFAULT_LPU_ID = process.env.DEFAULT_LPU_ID!
-const SOAP_METHOD_CHECK_PATIENT = 'IHubService_CheckPatient'
-const SOAP_NAMESPACE = 'http://tempuri.org/'
+// Константы для работы с прокси-сервером
+const PROXY_BASE_URL = "http://51.250.34.77:3001/proxy";
+const MIS_GUID = process.env.MIS_GUID!;
+const DEFAULT_LPU_ID = process.env.DEFAULT_LPU_ID!;
 
 /**
  * Проверяет статус авторизации пользователя по Telegram ID
@@ -37,8 +33,8 @@ export async function POST(request: Request) {
       })
     }
 
-    // Проверяем токены и параметры подключения
-    if (!WSDL_URL || !MIS_GUID || !DEFAULT_LPU_ID) {
+    // Проверяем параметры подключения
+    if (!MIS_GUID || !DEFAULT_LPU_ID) {
       console.error("🔴 Check Auth: Отсутствуют необходимые переменные окружения для подключения к МИС")
       return NextResponse.json(
         { 
@@ -50,80 +46,80 @@ export async function POST(request: Request) {
     }
 
     try {
-      // Вызываем SOAP API для проверки пациента
+      // Вызываем API через прокси-сервер для проверки пациента
       console.log("🟡 Check Auth: Проверяем номер телефона в МИС:", contactData.phoneNumber)
-      
-      // Создаем SOAP клиент
-      const client = await soap.createClientAsync(WSDL_URL, { 
-        namespaceArrayElements: false 
-      })
       
       // Форматируем номер телефона, убираем +7, оставляем только цифры
       const phoneFormatted = contactData.phoneNumber.replace(/\+7/, '').replace(/\D/g, '')
       
-      // Подготавливаем аргументы для SOAP запроса
-      const args = {
-        InputMessage: {
-          PhoneNumber: phoneFormatted,
-          TelegramId: telegramId.toString(),
-          Guid: MIS_GUID,
-          DefaultLpuId: parseInt(DEFAULT_LPU_ID, 10)
-        }
-      }
+      // Подготавливаем данные для запроса к прокси
+      const requestData = {
+        PhoneNumber: phoneFormatted,
+        TelegramId: telegramId.toString(),
+        Guid: MIS_GUID,
+        DefaultLpuId: parseInt(DEFAULT_LPU_ID, 10)
+      };
 
-      console.log("�� Check Auth: Отправляем SOAP запрос с параметрами:", args)
+      console.log("🟡 Check Auth: Отправляем запрос с параметрами:", requestData)
       
       try {
-        // Выполняем SOAP запрос
-        const [rawResult] = await client[`${SOAP_METHOD_CHECK_PATIENT}Async`](args)
+        // Выполняем запрос через прокси-сервер
+        const checkPatientUrl = `${PROXY_BASE_URL}/CheckPatient`;
+        console.log("🟡 Check Auth: URL запроса:", checkPatientUrl);
         
-        // Парсим результат, если он в формате XML
-        const jsonResult = typeof rawResult === 'string'
-          ? await parseStringPromise(rawResult)
-          : rawResult
+        const response = await fetch(checkPatientUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Прокси вернул ошибку: ${response.status} ${response.statusText}`);
+        }
         
-        console.log("🟡 Check Auth: Получен ответ от МИС:", jsonResult)
+        const result = await response.json();
+        console.log("🟡 Check Auth: Получен ответ от прокси:", result);
         
-        // Извлекаем нужные поля из ответа МИС
-        const authenticated = Boolean(jsonResult?.CheckPatientResponse?.Authenticated?.[0] === 'true')
-        const phoneNumber = contactData.phoneNumber
+        // Извлекаем нужные поля из ответа
+        const authenticated = Boolean(result.authenticated);
+        const phoneNumber = contactData.phoneNumber;
         
-        // Парсим профили пациентов, если они есть
-        let profiles = []
-        try {
-          if (jsonResult?.CheckPatientResponse?.Profiles?.[0]?.Profile) {
-            profiles = jsonResult.CheckPatientResponse.Profiles[0].Profile.map((profile: any) => ({
-              id: profile.Id?.[0] || '',
-              fullName: `${profile.LastName?.[0] || ''} ${profile.FirstName?.[0] || ''} ${profile.Patronymic?.[0] || ''}`.trim(),
-              firstName: profile.FirstName?.[0] || '',
-              patronymic: profile.Patronymic?.[0] || '',
-              lastName: profile.LastName?.[0] || '',
-              birthDate: profile.BirthDate?.[0] || '',
-              age: profile.Age?.[0] ? parseInt(profile.Age[0], 10) : 0,
-              phone: phoneNumber
-            }))
-          }
-        } catch (error) {
-          console.error("🔴 Check Auth: Ошибка при обработке профилей пациентов:", error)
+        // Обработка профилей пациентов, если они есть
+        let profiles = result.profiles || [];
+        
+        // Если профили в другом формате, преобразуем их
+        if (Array.isArray(profiles) && profiles.length > 0 && !profiles[0].id) {
+          profiles = profiles.map((profile: any) => ({
+            id: profile.Id || '',
+            fullName: `${profile.LastName || ''} ${profile.FirstName || ''} ${profile.Patronymic || ''}`.trim(),
+            firstName: profile.FirstName || '',
+            patronymic: profile.Patronymic || '',
+            lastName: profile.LastName || '',
+            birthDate: profile.BirthDate || '',
+            age: profile.Age ? parseInt(profile.Age.toString(), 10) : 0,
+            phone: phoneNumber
+          }));
         }
         
         // Формируем ответ
-        const response = {
+        const clientResponse = {
           authenticated,
           phoneNumber,
           exists: authenticated,
           hasMultipleProfiles: profiles.length > 1,
           profiles
-        }
+        };
         
-        console.log("🟡 Check Auth: Отправляем успешный ответ:", response)
+        console.log("🟡 Check Auth: Отправляем успешный ответ клиенту:", clientResponse);
         
-        return NextResponse.json(response)
-      } catch (soapError) {
-        console.error("🔴 Check Auth: Ошибка при выполнении SOAP запроса:", soapError)
+        return NextResponse.json(clientResponse);
+      } catch (proxyError) {
+        console.error("🔴 Check Auth: Ошибка при выполнении запроса через прокси:", proxyError);
         
-        // Временный обходной путь: если SOAP не работает, используем моковые данные
-        console.log("🟡 Check Auth: Используем моковые данные для отладки")
+        // Временный обходной путь: если прокси не работает, используем моковые данные
+        console.log("🟡 Check Auth: Используем моковые данные для отладки");
         
         // Моковые данные для тестирования
         const mockResponse = {
@@ -153,22 +149,22 @@ export async function POST(request: Request) {
               phone: contactData.phoneNumber,
             },
           ],
-        }
+        };
         
-        return NextResponse.json(mockResponse)
+        return NextResponse.json(mockResponse);
       }
     } catch (error) {
-      console.error("🔴 Check Auth: Ошибка при проверке номера телефона:", error)
+      console.error("🔴 Check Auth: Ошибка при проверке номера телефона:", error);
       return NextResponse.json({
         authenticated: false,
         error: "Failed to check phone number in MIS"
-      }, { status: 502 })
+      }, { status: 502 });
     }
   } catch (error) {
-    console.error("🔴 Check Auth: Ошибка при проверке статуса авторизации:", error)
+    console.error("🔴 Check Auth: Ошибка при проверке статуса авторизации:", error);
     return NextResponse.json({ 
       error: "Internal server error" 
-    }, { status: 500 })
+    }, { status: 500 });
   }
 }
 
