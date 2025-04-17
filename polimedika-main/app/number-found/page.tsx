@@ -6,9 +6,17 @@ import { useRouter } from "next/navigation"
 import { CheckIcon } from "lucide-react"
 import { AdaptiveContainer } from "@/components/adaptive-container"
 import type { UserProfile } from "@/types/user"
-import { useUser } from "@/context/user-context"
+import { useUser, UserProvider } from "@/context/user-context"
 
 export default function NumberFound() {
+  return (
+    <UserProvider>
+      <NumberFoundContent />
+    </UserProvider>
+  )
+}
+
+function NumberFoundContent() {
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
   const router = useRouter()

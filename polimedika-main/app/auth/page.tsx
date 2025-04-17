@@ -3,12 +3,20 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AdaptiveContainer } from "@/components/adaptive-container"
-import { useUser } from "@/context/user-context"
+import { useUser, UserProvider } from "@/context/user-context"
 import { ConsentForm } from "@/components/consent-form"
 import { isTelegramWebApp, initTelegramWebApp, getTelegramUser } from "@/lib/telegram"
 import type { UserProfile } from "@/types/user"
 
 export default function Auth() {
+  return (
+    <UserProvider>
+      <AuthContent />
+    </UserProvider>
+  )
+}
+
+function AuthContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showConsentForm, setShowConsentForm] = useState(true)
@@ -255,7 +263,7 @@ export default function Auth() {
                 {isLoading ? "Загрузка..." : isChecking ? "Проверка..." : "Проверить номер телефона"}
               </button>
             </form>
-
+ 
             {isChecking && (
               <div className="mt-4">
                 <p className="text-[14px] leading-[20px] text-txt-secondary">
