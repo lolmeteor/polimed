@@ -1,9 +1,20 @@
+"use client"
+
 import { HeaderLogo } from "@/components/header-logo"
 import { BottomNav } from "@/components/bottom-nav"
 import { AdaptiveContainer } from "@/components/adaptive-container"
 import { H1, P } from "@/components/ui/text-elements"
+import { UserProvider } from "@/context/user-context"
 
 export default function DispensaryPage() {
+  return (
+    <UserProvider>
+      <DispensaryContent />
+    </UserProvider>
+  )
+}
+
+function DispensaryContent() {
   return (
     <div className="relative min-h-screen max-w-md mx-auto bg-white pb-24">
       <HeaderLogo />

@@ -6,7 +6,7 @@ import { AdaptiveContainer } from "@/components/adaptive-container"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import { BottomNav } from "@/components/bottom-nav"
-import { useUser } from "@/context/user-context"
+import { useUser, UserProvider } from "@/context/user-context"
 import { toast } from "sonner"
 
 // Типы процедур
@@ -16,6 +16,14 @@ type Procedure = {
 }
 
 export default function ProceduresByReferralPage() {
+  return (
+    <UserProvider>
+      <ProceduresContent />
+    </UserProvider>
+  )
+}
+
+function ProceduresContent() {
   const router = useRouter()
   const { userProfile, isLoading: isUserLoading } = useUser()
   const [hoveredProcedure, setHoveredProcedure] = useState<string | null>(null)
