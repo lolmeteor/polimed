@@ -6,6 +6,7 @@ import { AdaptiveContainer } from "@/components/adaptive-container"
 import { Phone } from "lucide-react"
 import Link from "next/link"
 import { H1, P } from "@/components/ui/text-elements"
+import { UserProvider } from "@/context/user-context"
 
 // Стили для предотвращения разрыва фраз
 const noBreak = { whiteSpace: "nowrap" as const };
@@ -45,69 +46,71 @@ export default function AppointmentRulesPage() {
   };
 
   return (
-    <div className="relative min-h-screen max-w-lg mx-auto bg-white">
-      <HeaderLogo />
+    <UserProvider>
+      <div className="relative min-h-screen max-w-lg mx-auto bg-white">
+        <HeaderLogo />
 
-      <AdaptiveContainer className="mt-4">
-        <H1 className="text-xl sm:text-[20px] font-semibold text-txt-primary mb-8 leading-[24px] max-w-[400px]">
-          Правила записи
-          <br />
-          на прием к узким 
-          <br />
-          специалистам
-          <br />
-          и на лабораторную/
-          <br />
-          инструментальную 
-          <br />
-          диагностику
-        </H1>
+        <AdaptiveContainer className="mt-4">
+          <H1 className="text-xl sm:text-[20px] font-semibold text-txt-primary mb-8 leading-[24px] max-w-[400px]">
+            Правила записи
+            <br />
+            на прием к узким 
+            <br />
+            специалистам
+            <br />
+            и на лабораторную/
+            <br />
+            инструментальную 
+            <br />
+            диагностику
+          </H1>
 
-        <div className="relative pl-2 mb-8">
-          {/* Vertical line */}
-          <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-brand"></div>
+          <div className="relative pl-2 mb-8">
+            {/* Vertical line */}
+            <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-brand"></div>
 
-          <P className="text-[12px] font-semibold text-txt-primary leading-[122.11%]">
-            Запись к узким специалистам
-            <br />
-            и на лабораторную/инструментальную 
-            <br />
-            диагностику возможна при наличии
-            <br />
-            действующего направления от врача 
-            <br />
-            ООО "Полимедика Челябинск".
-          </P>
-          <P className="text-[12px] font-semibold text-txt-primary leading-[122.11%] mt-4">
-            Срок действия направления
-            <br />
-            30 календарных дней.
-          </P>
-        </div>
-
-        {/* Phone contact section - reduced margin-top */}
-        <div className="flex items-start mt-6 mb-24">
-          <div className="flex-shrink-0 mt-0.5">
-            <Phone className="w-5 h-5 text-brand" />
-          </div>
-          <div className="ml-3">
-            <a
-              href={formatPhoneLink("+7 (351) 240-99-00")}
-              onClick={(e) => handlePhoneClick(e, "+7 (351) 240-99-00")}
-              className="text-[14px] font-semibold text-txt-primary underline leading-[17px]"
-            >
-              +7 (351) 240-99-00
-            </a>
-            <P className="text-[11px] font-medium text-txt-secondary leading-[13px] mt-1">
-              Служба контроля качества
+            <P className="text-[12px] font-semibold text-txt-primary leading-[122.11%]">
+              Запись к узким специалистам
+              <br />
+              и на лабораторную/инструментальную 
+              <br />
+              диагностику возможна при наличии
+              <br />
+              действующего направления от врача 
+              <br />
+              ООО "Полимедика Челябинск".
+            </P>
+            <P className="text-[12px] font-semibold text-txt-primary leading-[122.11%] mt-4">
+              Срок действия направления
+              <br />
+              30 календарных дней.
             </P>
           </div>
-        </div>
-      </AdaptiveContainer>
 
-      {/* Нижнее меню */}
-      <BottomNav showBackButton={true} className="bottom-nav-fixed" />
-    </div>
+          {/* Phone contact section - reduced margin-top */}
+          <div className="flex items-start mt-6 mb-24">
+            <div className="flex-shrink-0 mt-0.5">
+              <Phone className="w-5 h-5 text-brand" />
+            </div>
+            <div className="ml-3">
+              <a
+                href={formatPhoneLink("+7 (351) 240-99-00")}
+                onClick={(e) => handlePhoneClick(e, "+7 (351) 240-99-00")}
+                className="text-[14px] font-semibold text-txt-primary underline leading-[17px]"
+              >
+                +7 (351) 240-99-00
+              </a>
+              <P className="text-[11px] font-medium text-txt-secondary leading-[13px] mt-1">
+                Служба контроля качества
+              </P>
+            </div>
+          </div>
+        </AdaptiveContainer>
+
+        {/* Нижнее меню */}
+        <BottomNav showBackButton={true} className="bottom-nav-fixed" />
+      </div>
+    </UserProvider>
   )
 }
 
