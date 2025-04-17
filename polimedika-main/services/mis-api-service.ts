@@ -261,9 +261,9 @@ class MISApiService {
     const doctorsResponse = await this.getDoctorsBySpecialtyAndInstitution('1', clinicId);
     const doctor = doctorsResponse.data.find(d => d.id === doctorId) || doctorsResponse.data[0];
     
-    // Получаем учреждения и находим нужное по ID
-    const institutionsData = await this.getMedicalInstitutionsByDistrict('1');
-    const clinic = institutionsData.find((c: MedicalInstitution) => c.id === clinicId) || institutionsData[0];
+    // Получаем медицинские учреждения
+    const institutions = await this.getMedicalInstitutionsByDistrict('1');
+    const clinic = institutions.find((c: MedicalInstitution) => c.id === clinicId) || institutions[0];
     
     // Имитация ответа от сервера
     return {
