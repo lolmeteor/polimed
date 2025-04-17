@@ -1,3 +1,5 @@
+"use client";
+
 // Сервис для работы с API МИС через прокси-сервер
 // Содержит методы для всех доступных API-методов МИС
 
@@ -259,8 +261,9 @@ class MISApiService {
     const doctorsResponse = await this.getDoctorsBySpecialtyAndInstitution('1', clinicId);
     const doctor = doctorsResponse.data.find(d => d.id === doctorId) || doctorsResponse.data[0];
     
-    const clinicsResponse = await this.getMedicalInstitutionsByDistrict('1');
-    const clinic = clinicsResponse.data.find(c => c.id === clinicId) || clinicsResponse.data[0];
+    // Получаем учреждения и находим нужное по ID
+    const institutionsData = await this.getMedicalInstitutionsByDistrict('1');
+    const clinic = institutionsData.find((c: MedicalInstitution) => c.id === clinicId) || institutionsData[0];
     
     // Имитация ответа от сервера
     return {

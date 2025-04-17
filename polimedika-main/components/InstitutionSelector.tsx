@@ -1,6 +1,9 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import { misApiService, District, MedicalInstitution } from '../services/mis-api-service';
 import { useUserContext } from '../contexts/UserContext';
+import { toast } from 'sonner';
 
 const InstitutionSelector: React.FC = () => {
   const [districts, setDistricts] = useState<District[]>([]);
@@ -47,6 +50,7 @@ const InstitutionSelector: React.FC = () => {
   // Выбор учреждения
   const handleInstitutionSelect = (institution: MedicalInstitution) => {
     setSelectedInstitution(institution);
+    toast.success(`Выбрано учреждение: ${institution.name}`);
   };
 
   return (
