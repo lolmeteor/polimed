@@ -3,8 +3,7 @@ import type { Metadata } from "next"
 import { Montserrat } from "next/font/google"
 import "./globals.css"
 import Layout from "@/components/layout"
-import { UserProvider } from "@/context/user-context"
-import { AppointmentProvider } from "@/context/appointment-context"
+import { UserProvider } from "@/contexts/UserContext"
 import { Toaster } from "sonner"
 import Script from "next/script"
 import TypographyProvider from "@/lib/typography-provider"
@@ -28,19 +27,28 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru">
+    <html lang="ru" className={montserrat.variable}>
       <head>
-        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="theme-color" content="#8DCECA" />
       </head>
-      <body className={`${montserrat.variable} font-sans`}>
+      <body>
         <UserProvider>
-          <AppointmentProvider>
-            <TypographyProvider>
-              <Layout isRootLayout={true}>{children}</Layout>
-              <Toaster richColors position="top-center" />
-            </TypographyProvider>
-          </AppointmentProvider>
+          <TypographyProvider>
+            {children}
+          </TypographyProvider>
+          <Toaster position="bottom-center" toastOptions={{ duration: 3000 }} />
         </UserProvider>
+        <Script id="ios-height-fix">{`
+          // iOS height fix
+          const setAppHeight = () => {
+            const doc = document.documentElement;
+            doc.style.setProperty('--app-height', window.innerHeight + 'px');
+          };
+          window.addEventListener('resize', setAppHeight);
+          setAppHeight();
+        `}</Script>
       </body>
     </html>
   )

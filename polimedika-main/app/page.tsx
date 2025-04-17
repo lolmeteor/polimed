@@ -1,35 +1,17 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import React from 'react';
+import Layout from '@/components/layout';
+import InstitutionSelector from '@/components/InstitutionSelector';
 
-// Компонент загрузки
-function LoadingScreen() {
+export default function HomePage() {
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8DCECA]"></div>
-    </div>
-  )
-}
-
-export default function Home() {
-  const router = useRouter()
-
-  useEffect(() => {
-    // Проверяем авторизацию пользователя
-    const isAuthenticated = localStorage.getItem("isAuthenticated") === "true"
-    const savedProfile = localStorage.getItem("selectedProfile")
-    
-    if (isAuthenticated && savedProfile) {
-      // Если пользователь авторизован, сразу перенаправляем на домашнюю страницу
-      router.push("/home")
-    } else {
-      // Если не авторизован, перенаправляем на страницу авторизации
-      router.push("/auth")
-    }
-  }, [router])
-
-  // Показываем загрузку, пока проверяем статус и не выполнен редирект
-  return <LoadingScreen />
+    <Layout>
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-6">Выбор медицинского учреждения</h1>
+        <InstitutionSelector />
+      </div>
+    </Layout>
+  );
 }
 
