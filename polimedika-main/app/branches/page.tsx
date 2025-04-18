@@ -5,17 +5,8 @@ import { BottomNav } from "@/components/bottom-nav"
 import { AdaptiveContainer } from "@/components/adaptive-container"
 import { Phone, MapPin } from "lucide-react"
 import { CLINIC_ADDRESSES } from "@/data/clinic-addresses"
-import { UserProvider } from "@/context/user-context"
 
 export default function BranchesPage() {
-  return (
-    <UserProvider>
-      <BranchesContent />
-    </UserProvider>
-  )
-}
-
-function BranchesContent() {
   // Функция для форматирования телефона в ссылку
   const formatPhoneLink = (phone: string) => {
     const cleanPhone = phone.replace(/[\s()-]/g, '');

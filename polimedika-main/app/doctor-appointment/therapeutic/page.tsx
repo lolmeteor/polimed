@@ -7,17 +7,8 @@ import { HeaderLogo } from "@/components/header-logo"
 import { BottomNav } from "@/components/bottom-nav"
 import { AdaptiveContainer } from "@/components/adaptive-container"
 import { cn } from "@/lib/utils"
-import { UserProvider } from "@/context/user-context"
 
 export default function TherapeuticPage() {
-  return (
-    <UserProvider>
-      <TherapeuticContent />
-    </UserProvider>
-  )
-}
-
-function TherapeuticContent() {
   const router = useRouter()
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
 
